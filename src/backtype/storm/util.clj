@@ -721,6 +721,7 @@
 
 
 (defn uptime-computer []
+  "Returns a function which computes time difference from when created."
   (let [start-time (current-time-secs)]
     (fn [] (time-delta start-time))))
 
