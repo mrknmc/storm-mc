@@ -25,8 +25,8 @@
   (:require [backtype.storm.cluster :as cluster])
   (:import [backtype.storm.scheduler INimbus SupervisorDetails WorkerSlot TopologyDetails
             Cluster Topologies SchedulerAssignment SchedulerAssignmentImpl DefaultScheduler ExecutorDetails])
-  (:use [backtype.storm bootstrap util timer])
-  (:use [backtype.storm.config :only [validate-configs-with-schemas]])
+  (:use [backtype.storm bootstrap util timer config])
+;  (:use [backtype.storm.config :only [validate-configs-with-schemas]])
   (:use [backtype.storm.daemon common])
   (:gen-class
    :methods [^{:static true} [launch [backtype.storm.scheduler.INimbus] void]]))
@@ -43,11 +43,6 @@
     ))
 
 
-
-(defn inbox [nimbus]
-  (master-inbox (:conf nimbus)))
-
-
 (defn- read-storm-conf [conf storm-id]
   (let [stormroot (master-stormdist-root conf storm-id)]
     (merge conf
@@ -56,16 +51,6 @@
           (File. (master-stormconf-path stormroot))
           )))))
 
-
-(defn set-topology-status!
-  "Set the status of a topology."
-  [nimbus storm-id status]
-  (let [storm-cluster-state (:storm-cluster-state nimbus)]
-    (.update-storm! storm-cluster-state
-      storm-id
-      {:status status})
-    (log-message "Updated " storm-id " with status " status)
-    ))
 
 (declare delay-event)
 (declare mk-assignments)
@@ -146,10 +131,6 @@
                                  (:old-status status))
                  }})
 
-(defn topology-status
-  "Get status of a topology."
-  [nimbus storm-id]
-  (-> nimbus :storm-cluster-state (.storm-base storm-id nil) :status))
 
 
 (defn transition!
@@ -669,18 +650,6 @@
 ;; 2. set assignments
 ;; 3. start storm - necessary in case master goes down, when goes back up can remember to take down the storm (2 states: on or off)
 
-(defn storm-active? [storm-cluster-state storm-name]
-  (not-nil? (get-storm-id storm-cluster-state storm-name)))
-
-(defn check-storm-active! [nimbus storm-name active?]
-  (if (= (not active?)
-        (storm-active? (:storm-cluster-state nimbus)
-          storm-name))
-    (if active?
-      (throw (NotAliveException. (str storm-name " is not alive")))
-      (throw (AlreadyAliveException. (str storm-name " is already active"))))
-    ))
-
 (defn code-ids [conf]
   (-> conf
     master-stormdist-root
@@ -762,98 +731,78 @@
        TOPOLOGY-MAX-TASK-PARALLELISM (total-conf TOPOLOGY-MAX-TASK-PARALLELISM)})))
 
 
-; Clean-up, contains methods on state that don't exist
-(defn do-cleanup [nimbus]
-  (let [storm-cluster-state (:storm-cluster-state nimbus)
-        conf (:conf nimbus)
-        submit-lock (:submit-lock nimbus)]
-    (let [to-cleanup-ids (locking submit-lock
-                           (cleanup-storm-ids conf storm-cluster-state))]
-      (when-not (empty? to-cleanup-ids)
-        (doseq [id to-cleanup-ids]
-          (log-message "Cleaning up " id)
-          (.teardown-heartbeats! storm-cluster-state id)
-          (.teardown-topology-errors! storm-cluster-state id)
-          (rmr (master-stormdist-root conf id))
-          (swap! (:heartbeats-cache nimbus) dissoc id))
-        ))))
-
-
-; Could be useful, why not in utils...
-(defn- file-older-than? [now seconds file]
-  (<= (+ (.lastModified file) (to-millis seconds)) (to-millis now)))
-
-
-; Woot - useless
-(defn clean-inbox [dir-location seconds]
-  "Deletes jar files in dir older than seconds."
-  (let [now (current-time-secs)
-        pred #(and (.isFile %) (file-older-than? now seconds %))
-        files (filter pred (file-seq (File. dir-location)))]
-    (doseq [f files]
-      (if (.delete f)
-        (log-message "Cleaning inbox ... deleted: " (.getName f))
-        ;; This should never happen
-        (log-error "Cleaning inbox ... error deleting: " (.getName f))
-        ))))
-
-
-; Probably useless for me
-(defn cleanup-corrupt-topologies! [nimbus]
-  (let [storm-cluster-state (:storm-cluster-state nimbus)
-        code-ids (set (code-ids (:conf nimbus)))
-        active-topologies (set (.active-storms storm-cluster-state))
-        corrupt-topologies (set/difference active-topologies code-ids)]
-    (doseq [corrupt corrupt-topologies]
-      (log-message "Corrupt topology " corrupt " has state on zookeeper but doesn't have a local dir on Nimbus. Cleaning up...")
-      (.remove-storm! storm-cluster-state corrupt)
-      )))
-
-
 ; Not sure what significance errors have, this can probably go
 (defn- get-errors [storm-cluster-state storm-id component-id]
   (->> (.errors storm-cluster-state storm-id component-id)
     (map #(ErrorInfo. (:error %) (:time-secs %)))))
 
 
-; This should not be used
-(defn- thriftify-executor-id [[first-task-id last-task-id]]
-  (ExecutorInfo. (int first-task-id) (int last-task-id)))
+; This is not OK
+;(defn- try-read-storm-conf [conf storm-id]
+;  "Try to read storm conf from conf."
+;  (try-cause
+;    (read-storm-conf conf storm-id)
+;    (catch FileNotFoundException e
+;                                 (throw (NotAliveException. storm-id)))
+;    )
+;)
 
 
-; This is OK
+; This is not OK
+;(defn- try-read-storm-topology [conf storm-id]
+;  "Try to read the topology from conf."
+;  (try-cause
+;    (read-storm-topology conf storm-id)
+;    (catch FileNotFoundException e
+;                                 (throw (NotAliveException. storm-id)))
+;    )
+;  )
+
+
+(defn topology-status
+  "Get status of a topology."
+  [nimbus storm-id]
+  (-> nimbus :storm-cluster-state (.storm-base storm-id nil) :status))
+
+
+(defn storm-active? [storm-cluster-state storm-name]
+  "Checks whether storm is active by checking whether id is nil."
+  ; get-storm-id is in common.clj
+  (not-nil? (get-storm-id storm-cluster-state storm-name)))
+
+
+(defn check-storm-active! [nimbus storm-name active?]
+  "Checks that the status of the Storm is equal to what is passed in."
+  (if (= (not active?)
+        (storm-active? (:storm-cluster-state nimbus)
+          storm-name))
+    (if active?
+      (throw (NotAliveException. (str storm-name " is not alive")))
+      (throw (AlreadyAliveException. (str storm-name " is already active"))))
+    ))
+
+
+(defn set-topology-status!
+  "Set the status of a topology."
+  [nimbus storm-id status]
+  (let [storm-cluster-state (:storm-cluster-state nimbus)]
+    (.update-storm! storm-cluster-state
+      storm-id
+      {:status status})
+    (log-message "Updated " storm-id " with status " status)
+    ))
+
+
 (def DISALLOWED-TOPOLOGY-NAME-STRS #{"/" "." ":" "\\"})
 
-; This is OK
 (defn validate-topology-name! [name]
+  "Check that the name of the topology is valid."
   (if (some #(.contains name %) DISALLOWED-TOPOLOGY-NAME-STRS)
     (throw (InvalidTopologyException.
              (str "Topology name cannot contain any of the following: " (pr-str DISALLOWED-TOPOLOGY-NAME-STRS))))
     (if (clojure.string/blank? name)
       (throw (InvalidTopologyException.
                ("Topology name cannot be blank"))))))
-
-
-; This is OK
-(defn- try-read-storm-conf [conf storm-id]
-  "Try to read storm conf from conf."
-  (try-cause
-    (read-storm-conf conf storm-id)
-    (catch FileNotFoundException e
-                                 (throw (NotAliveException. storm-id)))
-    )
-  )
-
-
-; This is OK
-(defn- try-read-storm-topology [conf storm-id]
-  "Try to read the topology from conf."
-  (try-cause
-    (read-storm-topology conf storm-id)
-    (catch FileNotFoundException e
-                                 (throw (NotAliveException. storm-id)))
-    )
-  )
 
 
 (defn mk-scheduler
@@ -882,6 +831,7 @@
   {:conf conf
    :inimbus inimbus
    :storm-cluster-state (cluster/mk-storm-cluster-state conf)
+   :submit-lock (Object.)
    :uptime (uptime-computer)
    ; by default this is DefaultTopologyValidator
    :validator (new-instance (conf NIMBUS-TOPOLOGY-VALIDATOR))
@@ -902,30 +852,25 @@
     ; prepare the validator
     (.prepare ^backtype.storm.nimbus.ITopologyValidator (:validator nimbus) conf)
     ; schedule a recurring function to do reassignments
-    (schedule-recurring (:timer nimbus)
-      0
-      (conf NIMBUS-MONITOR-FREQ-SECS)
-      (fn []
-        (when (conf NIMBUS-REASSIGN)
-          (locking (:submit-lock nimbus)
-            (mk-assignments nimbus)))
-        (do-cleanup nimbus)
-        ))
-    ;; Schedule Nimbus inbox cleaner
-    (schedule-recurring (:timer nimbus)
-      0
-      (conf NIMBUS-CLEANUP-INBOX-FREQ-SECS)
-      (fn []
-        (clean-inbox (inbox nimbus) (conf NIMBUS-INBOX-JAR-EXPIRATION-SECS))
-        ))
+;    (schedule-recurring (:timer nimbus)
+;      0
+;      (conf NIMBUS-MONITOR-FREQ-SECS)
+;      (fn []
+;        (when (conf NIMBUS-REASSIGN)
+;          (locking (:submit-lock nimbus)
+;            (mk-assignments nimbus)))
+;        (do-cleanup nimbus)
+;        ))
     (reify Nimbus$Iface
       (^void submitTopologyWithOpts
-       [this ^String storm-name ^String uploadedJarLocation ^String serializedConf ^StormTopology topology
+       [this ^String storm-name ^String serializedConf ^StormTopology topology
         ^SubmitOptions submitOptions]
        (try
          (assert (not-nil? submitOptions))
          (validate-topology-name! storm-name)
+         ; check that the storm is not running
          (check-storm-active! nimbus storm-name false)
+         ; there is no need to unserialize the conf, it should not be at this point
          (let [topo-conf (from-json serializedConf)]
            (try
              (validate-configs-with-schemas topo-conf)
@@ -935,7 +880,10 @@
                                                                 storm-name
                                                                 topo-conf
                                                                 topology))
+         ; here un-serializing ends, with validation
+         ; increment number of submitted
          (swap! (:submitted-count nimbus) inc)
+         ; here we create a "unique" storm-id, set it up and start it, also makes assignments
          (let [storm-id (str storm-name "-" @(:submitted-count nimbus) "-" (current-time-secs))
                storm-conf (normalize-conf
                             conf
@@ -952,20 +900,22 @@
            ;; lock protects against multiple topologies being submitted at once and
            ;; cleanup thread killing topology in b/w assignment and starting the topology
            (locking (:submit-lock nimbus)
-             (setup-storm-code conf storm-id uploadedJarLocation storm-conf topology)
-             (.setup-heartbeats! storm-cluster-state storm-id)
+             ; no need to setup code, it is there
+;             (setup-storm-code conf storm-id uploadedJarLocation storm-conf topology)
+             ; no need to setup heartbeats
+;             (.setup-heartbeats! storm-cluster-state storm-id)
              ;; this is a map from Thrift status names to keyword statuses
              (let [thrift-status->kw-status {TopologyInitialStatus/INACTIVE :inactive
                                              TopologyInitialStatus/ACTIVE :active}]
-               (start-storm nimbus storm-name storm-id (thrift-status->kw-status (.get_initial_status submitOptions))))
+               (start-storm nimbus storm-name storm-id (thrift-status->kw-status (.getInitialStatus submitOptions))))
              (mk-assignments nimbus)))
          (catch Throwable e
                           (log-warn-error e "Topology submission exception. (topology name='" storm-name "')")
                           (throw e))))
 
       (^void submitTopology
-       [this ^String storm-name ^String uploadedJarLocation ^String serializedConf ^StormTopology topology]
-       (.submitTopologyWithOpts this storm-name uploadedJarLocation serializedConf topology
+       [this ^String storm-name ^String serializedConf ^StormTopology topology]
+       (.submitTopologyWithOpts this storm-name serializedConf topology
                                      (SubmitOptions. TopologyInitialStatus/ACTIVE)))
 
       (^void killTopology [this ^String name]

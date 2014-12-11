@@ -235,6 +235,7 @@
   (long (* (long 1000) secs)))
 
 (defn clojurify-structure
+  "Converts a Java instance into a Clojure one."
   [s]
   (prewalk (fn [x]
              (cond (instance? Map x) (into {} x)
@@ -573,6 +574,7 @@
   (JSONValue/toJSONString obj))
 
 (defn from-json
+  "Parses to Java and then clojurifies."
   [^String str]
   (if str
     (clojurify-structure
