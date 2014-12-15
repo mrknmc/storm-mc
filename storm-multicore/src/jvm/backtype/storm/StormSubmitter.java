@@ -17,10 +17,9 @@
  */
 package backtype.storm;
 
-import backtype.storm.daemon.Nimbus;
+import backtype.storm.generated.Nimbus;
 import backtype.storm.generated.*;
 import backtype.storm.utils.Utils;
-import org.json.simple.JSONValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

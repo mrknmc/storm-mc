@@ -20,7 +20,7 @@
  *
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  */
-package backtype.storm.daemon;
+package backtype.storm.generated;
 
 import backtype.storm.generated.AlreadyAliveException;
 import backtype.storm.generated.InvalidTopologyException;
@@ -53,11 +53,11 @@ public class Nimbus {
 
 //    public TopologyInfo getTopologyInfo(String id) throws NotAliveException, org.apache.thrift.TException;
 
-    public String getTopologyConf(String id) throws NotAliveException, org.apache.thrift.TException;
+    public String getTopologyConf(String id) throws NotAliveException;
 
-    public StormTopology getTopology(String id) throws NotAliveException, org.apache.thrift.TException;
+    public StormTopology getTopology(String id) throws NotAliveException;
 
-    public StormTopology getUserTopology(String id) throws NotAliveException, org.apache.thrift.TException;
+    public StormTopology getUserTopology(String id) throws NotAliveException;
 
   }
 }

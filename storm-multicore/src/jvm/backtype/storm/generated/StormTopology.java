@@ -43,14 +43,14 @@ public class StormTopology {
     return new StormTopology(copySpouts, copyBolts);
   }
 
-  /**
-   * Combines all components into one Map.
-   * @return Map of all components
-   */
-  public Map<String, Object> allComponents() {
-    Map<String, Object> ret = new HashMap<String, Object>(spouts);
-    ret.putAll(bolts);
-    return ret;
-  }
+//  /**
+//   * Combines all components into one Map.
+//   * @return Map of all components
+//   */
+//  public Map<String, Object> allComponents() {
+//    Map<String, Object> ret = new HashMap<String, Object>(spouts);
+//    ret.putAll(bolts);
+//    return ret;
+//  }
 
 }
