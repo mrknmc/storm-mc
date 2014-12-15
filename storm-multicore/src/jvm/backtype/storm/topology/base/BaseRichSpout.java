@@ -15,15 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package backtype.storm.topology;
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package backtype.storm.topology.base;
 
-import backtype.storm.spout.ISpout;
+import backtype.storm.topology.IRichSpout;
 
 /**
- * When writing topologies using Java, {@link IRichBolt} and {@link IRichSpout} are the main interfaces
- * to use to implement components of the topology.
  *
+ * @author nathan
  */
-public interface IRichSpout extends ISpout, IComponent {
+public abstract class BaseRichSpout extends BaseComponent implements IRichSpout {
+    @Override
+    public void close() {
+    }
 
+    @Override
+    public void activate() {
+    }
+
+    @Override
+    public void deactivate() {
+    }
+
+    @Override
+    public void ack(Object msgId) {
+    }
+
+    @Override
+    public void fail(Object msgId) {
+    }
 }

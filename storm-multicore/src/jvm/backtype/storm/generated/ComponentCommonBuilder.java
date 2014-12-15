@@ -9,7 +9,7 @@ public class ComponentCommonBuilder {
   private Map<GlobalStreamId, Grouping> inputs = new HashMap<GlobalStreamId, Grouping>();
   private Map<String, StreamInfo> streams = new HashMap<String, StreamInfo>();
   private Number parallelismHint;
-  private Map<String, Object> conf;
+  private Map<String, Object> conf = new HashMap<String, Object>();
 
   public Map<GlobalStreamId, Grouping> getInputs() {
     return inputs;
@@ -44,7 +44,9 @@ public class ComponentCommonBuilder {
   }
 
   public void putToConf(Map<String, Object> newConf) {
-    this.conf.putAll(newConf);
+    if (newConf != null) {
+      this.conf.putAll(newConf);
+    }
   }
 
   public void putToInputs(GlobalStreamId key, Grouping val) {

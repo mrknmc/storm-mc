@@ -8,8 +8,8 @@ import java.util.Map;
 
 public class StormTopology {
 
-  private final ImmutableMap<String, SpoutSpec> spouts;
-  private final ImmutableMap<String, Bolt> bolts;
+  private final Map<String, SpoutSpec> spouts;
+  private final Map<String, Bolt> bolts;
 
   public Map<String, SpoutSpec> getSpouts() {
     return spouts;
@@ -20,6 +20,8 @@ public class StormTopology {
   }
 
   public StormTopology(Map<String, SpoutSpec> spouts, Map<String, Bolt> bolts) {
+//    this.spouts = spouts;
+//    this.bolts = bolts;
     this.spouts = ImmutableMap.copyOf(spouts);
     this.bolts = ImmutableMap.copyOf(bolts);
   }

@@ -15,15 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package backtype.storm.topology;
+package backtype.storm.topology.base;
 
-import backtype.storm.spout.ISpout;
+import backtype.storm.topology.IRichBolt;
 
-/**
- * When writing topologies using Java, {@link IRichBolt} and {@link IRichSpout} are the main interfaces
- * to use to implement components of the topology.
- *
- */
-public interface IRichSpout extends ISpout, IComponent {
-
+public abstract class BaseRichBolt extends BaseComponent implements IRichBolt {
+    @Override
+    public void cleanup() {
+    }    
 }

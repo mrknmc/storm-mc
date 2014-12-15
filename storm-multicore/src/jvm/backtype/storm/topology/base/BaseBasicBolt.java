@@ -15,15 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package backtype.storm.topology;
+package backtype.storm.topology.base;
 
-import backtype.storm.spout.ISpout;
+import backtype.storm.task.TopologyContext;
+import backtype.storm.topology.IBasicBolt;
 
-/**
- * When writing topologies using Java, {@link IRichBolt} and {@link IRichSpout} are the main interfaces
- * to use to implement components of the topology.
- *
- */
-public interface IRichSpout extends ISpout, IComponent {
+import java.util.Map;
 
+public abstract class BaseBasicBolt extends BaseComponent implements IBasicBolt {
+
+    @Override
+    public void prepare(Map stormConf, TopologyContext context) {
+    }
+
+    @Override
+    public void cleanup() {
+    }    
 }

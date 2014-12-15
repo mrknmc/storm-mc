@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package backtype.storm.task;
+package backtype.storm.spout;
 
 import backtype.storm.task.TopologyContext;
 

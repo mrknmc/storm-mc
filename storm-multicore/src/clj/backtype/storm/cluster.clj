@@ -51,7 +51,7 @@
 
 (defn mk-storm-cluster-state
   "Make state for one instance of a 'storm'."
-  []
+  [conf]
   (let [
         assignment-info-callback (atom {})
         supervisors-callback (atom nil)

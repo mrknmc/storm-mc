@@ -283,7 +283,7 @@
 (defn all-components
   "Retrieves all components of a topology."
   [^StormTopology topology]
-  (merge (.getBolts topology) (.getSpouts topology)))
+  (apply merge {} (.getBolts topology) (.getSpouts topology)))
 
 
 ;; component->executors is a map from spout/bolt id to number of executors for that component
@@ -339,7 +339,7 @@
   "Validates IDs."
   [^StormTopology topology]
   ; make separate sets of bolts and spouts
-  (let [sets ((.getBolts topology) (.getSpouts topology))
+  (let [sets [(.getBolts topology) (.getSpouts topology)]
 ;  (let [sets (map #(.getFieldValue topology %) thrift/STORM-TOPOLOGY-FIELDS)
         ; see if any of components is in both sets
         offending (apply any-intersection sets)]
@@ -385,7 +385,9 @@
     ; if number of tasks is more than 0
     ; and parallelismHint is set
     ; parallelism hint must be more than 0
-    (when (and (> (conf TOPOLOGY-TASKS) 0)
+    (when (and
+      ; TODO: figure out why this doesn't work
+;            (> (conf TOPOLOGY-TASKS) 0))
             parallelism
             (<= parallelism 0))
       (throw (InvalidTopologyException. "Number of executors must be greater than 0 when number of tasks is greater than 0")))))
@@ -407,7 +409,8 @@
   "Returns a system topology. (ackers etc. added to original)"
   [storm-conf ^StormTopology topology]
   (validate-basic! topology)
-  (let [ret (.deepCopy topology)]
+;  (let [ret (.deepCopy topology)]
+  (let [ret topology]
     ; we do not need ackers, but see if there is anything vital there
 ;    (add-acker! storm-conf ret)
     ; add the rest if vital

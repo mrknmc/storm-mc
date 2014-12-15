@@ -15,15 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package backtype.storm.topology;
+package backtype.storm.spout;
 
-import backtype.storm.spout.ISpout;
+import java.util.List;
 
-/**
- * When writing topologies using Java, {@link IRichBolt} and {@link IRichSpout} are the main interfaces
- * to use to implement components of the topology.
- *
- */
-public interface IRichSpout extends ISpout, IComponent {
-
+public interface ISpoutOutputCollector {
+    /**
+        Returns the task ids that received the tuples.
+    */
+    List<Integer> emit(String streamId, List<Object> tuple, Object messageId);
+    void emitDirect(int taskId, String streamId, List<Object> tuple, Object messageId);
+    void reportError(Throwable error);
 }
+

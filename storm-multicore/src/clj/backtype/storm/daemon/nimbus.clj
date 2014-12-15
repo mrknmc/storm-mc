@@ -870,6 +870,7 @@
   {:conf conf
    :inimbus inimbus
    :storm-cluster-state (cluster/mk-storm-cluster-state conf)
+   :submitted-count (atom 0)
    :submit-lock (Object.)
    :uptime (uptime-computer)
    ; by default this is DefaultTopologyValidator
@@ -1083,9 +1084,9 @@
       (shutdown [this]
         (log-message "Shutting down master")
         (cancel-timer (:timer nimbus))
-        (.disconnect (:storm-cluster-state nimbus))
-        (.cleanup (:downloaders nimbus))
-        (.cleanup (:uploaders nimbus))
+;        (.disconnect (:storm-cluster-state nimbus))
+;        (.cleanup (:downloaders nimbus))
+;        (.cleanup (:uploaders nimbus))
         (log-message "Shut down master")
         )
       DaemonCommon
@@ -1095,6 +1096,6 @@
 
 (defn standalone-nimbus []
   (reify INimbus
-    (prepare [this conf]
+    (prepare [this conf ]
       )))
 
