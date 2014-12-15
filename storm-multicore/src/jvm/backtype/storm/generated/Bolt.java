@@ -27,23 +27,15 @@ import backtype.storm.topology.IRichBolt;
 
 public class Bolt implements java.io.Serializable, Cloneable {
 
-  IRichBolt boltObject;
-  ComponentCommon common;
+  private final IRichBolt boltObject;
+  private final ComponentCommon common;
 
   public IRichBolt getBoltObject() {
     return boltObject;
   }
 
-  public void setBoltObject(IRichBolt boltObject) {
-    this.boltObject = boltObject;
-  }
-
   public ComponentCommon getCommon() {
     return common;
-  }
-
-  public void setCommon(ComponentCommon common) {
-    this.common = common;
   }
 
   public Bolt(IRichBolt boltObject, ComponentCommon common) {

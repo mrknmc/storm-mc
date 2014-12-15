@@ -78,9 +78,9 @@ public class StormSubmitter {
         stormConf.putAll(Utils.readCommandLineOpts());
         Map conf = Utils.readStormConfig();
         conf.putAll(stormConf);
-        String serConf = JSONValue.toJSONString(stormConf);
+//        String serConf = JSONValue.toJSONString(stormConf);
         LOG.info("Submitting topology " + name + " in local mode");
-        localNimbus.submitTopology(name, serConf, topology);
+        localNimbus.submitTopology(name, stormConf, topology);
         LOG.info("Finished submitting topology: " +  name);
     }
 

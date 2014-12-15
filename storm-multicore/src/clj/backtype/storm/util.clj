@@ -604,11 +604,13 @@
   [m k v]
   (if v (assoc m k v) m))
 
+
 (defn multi-set
   "Returns a map of elem to count"
   [aseq]
   (apply merge-with +
          (map #(hash-map % 1) aseq)))
+
 
 (defn set-var-root*
   [avar val]
@@ -666,16 +668,20 @@
           rest-elems (apply interleave-all (map rest colls))]
       (concat my-elems rest-elems))))
 
+
 (defn update
   "Return new map with afn applied to val with key k."
   [m k afn]
   (assoc m k (afn (get m k))))
 
+
 (defn any-intersection
+  "Check if the sets have an intersection."
   [& sets]
   (let [elem->count (multi-set (apply concat sets))]
     (-> (filter-val #(> % 1) elem->count)
         keys)))
+
 
 (defn between?
   "val >= lower and val <= upper"

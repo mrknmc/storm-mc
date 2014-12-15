@@ -83,26 +83,20 @@ import java.util.Map;
 public class TopologyBuilder {
     private Map<String, IRichBolt> _bolts = new HashMap<String, IRichBolt>();
     private Map<String, IRichSpout> _spouts = new HashMap<String, IRichSpout>();
-    private Map<String, ComponentCommon> _commons = new HashMap<String, ComponentCommon>();
-
-//    private Map<String, Map<GlobalStreamId, Grouping>> _inputs = new HashMap<String, Map<GlobalStreamId, Grouping>>();
-
-//    private Map<String, StateSpoutSpec> _stateSpouts = new HashMap<String, StateSpoutSpec>();
-    
+    private Map<String, ComponentCommonBuilder> _commonBuilders = new HashMap<String, ComponentCommonBuilder>();
     
     public StormTopology createTopology() {
         Map<String, Bolt> boltSpecs = new HashMap<String, Bolt>();
         Map<String, SpoutSpec> spoutSpecs = new HashMap<String, SpoutSpec>();
-        for(String boltId: _bolts.keySet()) {
+        for (String boltId: _bolts.keySet()) {
             IRichBolt bolt = _bolts.get(boltId);
             ComponentCommon common = getComponentCommon(boltId, bolt);
             boltSpecs.put(boltId, new Bolt(bolt, common));
         }
-        for(String spoutId: _spouts.keySet()) {
+        for (String spoutId: _spouts.keySet()) {
             IRichSpout spout = _spouts.get(spoutId);
             ComponentCommon common = getComponentCommon(spoutId, spout);
             spoutSpecs.put(spoutId, new SpoutSpec(spout, common));
-            
         }
         return new StormTopology(spoutSpecs, boltSpecs);
     }
@@ -128,7 +122,7 @@ public class TopologyBuilder {
      */
     public BoltDeclarer setBolt(String id, IRichBolt bolt, Number parallelism_hint) {
         validateUnusedId(id);
-        initCommon(id, bolt, parallelism_hint);
+        initCommonBuilder(id, bolt, parallelism_hint);
         _bolts.put(id, bolt);
         return new BoltGetter(id);
     }
@@ -183,54 +177,38 @@ public class TopologyBuilder {
      */
     public SpoutDeclarer setSpout(String id, IRichSpout spout, Number parallelism_hint) {
         validateUnusedId(id);
-        initCommon(id, spout, parallelism_hint);
+        initCommonBuilder(id, spout, parallelism_hint);
         _spouts.put(id, spout);
         return new SpoutGetter(id);
     }
 
-//    public void setStateSpout(String id, IRichStateSpout stateSpout) {
-//        setStateSpout(id, stateSpout, null);
-//    }
-//
-//    public void setStateSpout(String id, IRichStateSpout stateSpout, Number parallelism_hint) {
-//        validateUnusedId(id);
-//        // TODO: finish
-//    }
-
-
     private void validateUnusedId(String id) {
-        if(_bolts.containsKey(id)) {
+        if (_bolts.containsKey(id)) {
             throw new IllegalArgumentException("Bolt has already been declared for id " + id);
         }
-        if(_spouts.containsKey(id)) {
+        if (_spouts.containsKey(id)) {
             throw new IllegalArgumentException("Spout has already been declared for id " + id);
         }
-//        if(_stateSpouts.containsKey(id)) {
-//            throw new IllegalArgumentException("State spout has already been declared for id " + id);
-//        }
     }
 
     private ComponentCommon getComponentCommon(String id, IComponent component) {
-        // cloning the component here
-        ComponentCommon ret = new ComponentCommon(_commons.get(id));
-        
+        ComponentCommonBuilder commonBuilder = _commonBuilders.get(id);
         OutputFieldsGetter getter = new OutputFieldsGetter();
         component.declareOutputFields(getter);
-        ret.setStreams(getter.getFieldsDeclaration());
-        return ret;
+        commonBuilder.setStreams(getter.getFieldsDeclaration());
+        return commonBuilder.build();
     }
     
-    private void initCommon(String id, IComponent component, Number parallelism) {
-        ComponentCommon common = new ComponentCommon();
-        common.setInputs(new HashMap<GlobalStreamId, Grouping>());
-        if (parallelism != null) {
-            common.setParallelismHint(parallelism.intValue());
+    private void initCommonBuilder(String id, IComponent component, Number parallelismHint) {
+        ComponentCommonBuilder commonBuilder = new ComponentCommonBuilder();
+        Map<String, Object> conf = component.getComponentConfiguration();
+        if (parallelismHint != null) {
+            commonBuilder.setParallelismHint(parallelismHint);
         }
-        Map conf = component.getComponentConfiguration();
         if (conf != null) {
-            common.setJsonConf(JSONValue.toJSONString(conf));
+            commonBuilder.setConf(conf);
         }
-        _commons.put(id, common);
+        _commonBuilders.put(id, commonBuilder);
     }
 
     protected class ConfigGetter<T extends ComponentConfigurationDeclarer> extends BaseConfigurationDeclarer<T> {
@@ -242,11 +220,10 @@ public class TopologyBuilder {
         
         @Override
         public T addConfigurations(Map conf) {
-            if(conf!=null && conf.containsKey(Config.TOPOLOGY_KRYO_REGISTER)) {
+            if (conf != null && conf.containsKey(Config.TOPOLOGY_KRYO_REGISTER)) {
                 throw new IllegalArgumentException("Cannot set serializations for a component using fluent API");
             }
-            String currConf = _commons.get(_id).getJsonConf();
-            _commons.get(_id).setJsonConf(mergeIntoJson(parseJson(currConf), conf));
+            _commonBuilders.get(_id).putToConf(conf);
             return (T) this;
         }
     }
@@ -322,7 +299,7 @@ public class TopologyBuilder {
         }
 
         private BoltDeclarer grouping(String componentId, String streamId, Grouping grouping) {
-            _commons.get(_boltId).putToInputs(new GlobalStreamId(componentId, streamId), grouping);
+            _commonBuilders.get(_boltId).putToInputs(new GlobalStreamId(componentId, streamId), grouping);
             return this;
         }
 
@@ -343,13 +320,11 @@ public class TopologyBuilder {
     }
     
     private static Map parseJson(String json) {
-        if(json==null) return new HashMap();
-        else return (Map) JSONValue.parse(json);
+        if (json == null) {
+            return new HashMap();
+        } else {
+            return (Map) JSONValue.parse(json);
+        }
     }
-    
-    private static String mergeIntoJson(Map into, Map newMap) {
-        Map res = new HashMap(into);
-        if(newMap!=null) res.putAll(newMap);
-        return JSONValue.toJSONString(res);
-    }
+
 }

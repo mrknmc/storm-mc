@@ -25,8 +25,6 @@
 ;  (:require [backtype.storm.thrift :as thrift])
   )
 
-(defn system-id? [id]
-  (Utils/isSystemId id))
 
 (def ACKER-COMPONENT-ID acker/ACKER-COMPONENT-ID)
 (def ACKER-INIT-STREAM-ID acker/ACKER-INIT-STREAM-ID)
@@ -106,72 +104,7 @@
         (halt-process! 13 "Error on initialization")
         )))))
 
-(defn- validate-ids! [^StormTopology topology]
-  (let [sets (map #(.getFieldValue topology %) thrift/STORM-TOPOLOGY-FIELDS)
-        offending (apply any-intersection sets)]
-    (if-not (empty? offending)
-      (throw (InvalidTopologyException.
-              (str "Duplicate component ids: " offending))))
-    (doseq [f thrift/STORM-TOPOLOGY-FIELDS
-            :let [obj-map (.getFieldValue topology f)]]
-      (doseq [id (keys obj-map)]
-        (if (system-id? id)
-          (throw (InvalidTopologyException.
-                  (str id " is not a valid component id")))))
-      (doseq [obj (vals obj-map)
-              id (-> obj .get_common .get_streams keys)]
-        (if (system-id? id)
-          (throw (InvalidTopologyException.
-                  (str id " is not a valid stream id"))))))
-    ))
 
-(defn all-components [^StormTopology topology]
-  (apply merge {}
-         (for [f thrift/STORM-TOPOLOGY-FIELDS]
-           (.getFieldValue topology f)
-           )))
-
-(defn component-conf [component]
-  (->> component
-      .get_common
-      .get_json_conf
-      from-json))
-
-(defn validate-basic! [^StormTopology topology]
-  (validate-ids! topology)
-  (doseq [f thrift/SPOUT-FIELDS
-          obj (->> f (.getFieldValue topology) vals)]
-    (if-not (empty? (-> obj .get_common .get_inputs))
-      (throw (InvalidTopologyException. "May not declare inputs for a spout"))))
-  (doseq [[comp-id comp] (all-components topology)
-          :let [conf (component-conf comp)
-                p (-> comp .get_common thrift/parallelism-hint)]]
-    (when (and (> (conf TOPOLOGY-TASKS) 0)
-               p
-               (<= p 0))
-      (throw (InvalidTopologyException. "Number of executors must be greater than 0 when number of tasks is greater than 0"))
-      )))
-
-(defn validate-structure! [^StormTopology topology]
-  ;; validate all the component subscribe from component+stream which actually exists in the topology
-  ;; and if it is a fields grouping, validate the corresponding field exists  
-  (let [all-components (all-components topology)]
-    (doseq [[id comp] all-components
-            :let [inputs (.. comp get_common get_inputs)]]
-      (doseq [[global-stream-id grouping] inputs
-              :let [source-component-id (.get_componentId global-stream-id)
-                    source-stream-id    (.get_streamId global-stream-id)]]
-        (if-not (contains? all-components source-component-id)
-          (throw (InvalidTopologyException. (str "Component: [" id "] subscribes from non-existent component [" source-component-id "]")))
-          (let [source-streams (-> all-components (get source-component-id) .get_common .get_streams)]
-            (if-not (contains? source-streams source-stream-id)
-              (throw (InvalidTopologyException. (str "Component: [" id "] subscribes from non-existent stream: [" source-stream-id "] of component [" source-component-id "]")))
-              (if (= :fields (thrift/grouping-type grouping))
-                (let [grouping-fields (set (.get_fields grouping))
-                      source-stream-fields (-> source-streams (get source-stream-id) .get_output_fields set)
-                      diff-fields (set/difference grouping-fields source-stream-fields)]
-                  (when-not (empty? diff-fields)
-                    (throw (InvalidTopologyException. (str "Component: [" id "] subscribes from stream: [" source-stream-id "] of component [" source-component-id "] with non-existent fields: " diff-fields)))))))))))))
 
 (defn acker-inputs [^StormTopology topology]
   (let [bolt-ids (.. topology get_bolts keySet)
@@ -292,24 +225,11 @@
                           :conf {TOPOLOGY-TASKS 0})]
     (.put_to_bolts topology SYSTEM-COMPONENT-ID system-bolt-spec)))
 
-(defn system-topology! [storm-conf ^StormTopology topology]
-  (validate-basic! topology)
-  (let [ret (.deepCopy topology)]
-    (add-acker! storm-conf ret)
-    (add-metric-components! storm-conf ret)    
-    (add-system-components! storm-conf ret)
-    (add-metric-streams! ret)
-    (add-system-streams! ret)
-    (validate-structure! ret)
-    ret
-    ))
 
 (defn has-ackers? [storm-conf]
   (or (nil? (storm-conf TOPOLOGY-ACKER-EXECUTORS)) (> (storm-conf TOPOLOGY-ACKER-EXECUTORS) 0)))
 
 
-(defn num-start-executors [component]
-  (thrift/parallelism-hint (.get_common component)))
 
 (defn storm-task-info
   "Returns map from task -> component id"
@@ -348,3 +268,154 @@
   (->> executor->node+port
        (mapcat (fn [[e node+port]] (for [t (executor-id->tasks e)] [t node+port])))
        (into {})))
+
+
+; Stuff below here should be ok
+
+
+(def grouping-constants
+  {Grouping$GroupingType/FIELDS :fields
+   Grouping$GroupingType/SHUFFLE :shuffle
+   Grouping$GroupingType/ALL :all
+   Grouping$GroupingType/NONE :none
+   ;   Grouping$GroupingType/CUSTOM_SERIALIZED :custom-serialized
+   Grouping$GroupingType/CUSTOM_OBJECT :custom-object
+   Grouping$GroupingType/DIRECT :direct
+   Grouping$GroupingType/LOCAL_OR_SHUFFLE :local-or-shuffle})
+
+
+(defn grouping-type
+  "Converts a GroupingType enum into a keyword."
+  [grouping]
+  (grouping-constants (.getType grouping)))
+
+
+(defn validate-structure! [^StormTopology topology]
+  ;; validate all the component subscribe from component+stream which actually exists in the topology
+  ;; and if it is a fields grouping, validate the corresponding field exists
+  (let [all-components (all-components topology)]
+    (doseq [[id comp] all-components
+            :let [inputs (.. comp getCommon getInputs)]]
+      (doseq [[global-stream-id grouping] inputs
+              :let [source-component-id (.getComponentId global-stream-id)
+                    source-stream-id    (.getStreamId global-stream-id)]]
+        (if-not (contains? all-components source-component-id)
+          (throw (InvalidTopologyException. (str "Component: [" id "] subscribes from non-existent component [" source-component-id "]")))
+          (let [source-streams (-> all-components (get source-component-id) .getCommon .getStreams)]
+            (if-not (contains? source-streams source-stream-id)
+              (throw (InvalidTopologyException. (str "Component: [" id "] subscribes from non-existent stream: [" source-stream-id "] of component [" source-component-id "]")))
+              (if (= :fields (grouping-type grouping))
+                (let [grouping-fields (set (.getFields grouping))
+                      source-stream-fields (-> source-streams (get source-stream-id) .getOutputFields set)
+                      diff-fields (set/difference grouping-fields source-stream-fields)]
+                  (when-not (empty? diff-fields)
+                    (throw (InvalidTopologyException. (str "Component: [" id "] subscribes from stream: [" source-stream-id "] of component [" source-component-id "] with non-existent fields: " diff-fields)))))))))))))
+
+
+(defn system-id?
+  "System ids start with __."
+  [id]
+  (Utils/isSystemId id))
+
+
+(defn- validate-ids!
+  "Validates IDs."
+  [^StormTopology topology]
+  ; make separate sets of bolts and spouts
+  (let [sets ((.getBolts topology) (.getSpouts topology))
+;  (let [sets (map #(.getFieldValue topology %) thrift/STORM-TOPOLOGY-FIELDS)
+        ; see if any of components is in both sets
+        offending (apply any-intersection sets)]
+    (if-not (empty? offending)
+      (throw (InvalidTopologyException.
+               (str "Duplicate component ids: " offending))))
+    (doseq [[comp-key comp] (.allComponents topopology)
+            :let [stream-keys (-> comp .getCommon .getStreams keys)]]
+      ; check if id of the component is a system id
+      (if (system-id? comp-key)
+        (throw (InvalidTopologyException.
+                 (str id " is not a valid component id"))))
+      ; check if any of the stream ids is a system id
+      (doseq [stream-key stream-keys]
+        (if (system-id? stream-key)
+          (throw (InvalidTopologyException.
+                   (str id " is not a valid stream id"))))))
+;    (doseq [f thrift/STORM-TOPOLOGY-FIELDS
+;            :let [obj-map (.getFieldValue topology f)]]
+;      (doseq [id (keys obj-map)]
+;        (if (system-id? id)
+;          (throw (InvalidTopologyException.
+;                   (str id " is not a valid component id")))))
+;      (doseq [obj (vals obj-map)
+;              id (-> obj .get_common .get_streams keys)]
+;        (if (system-id? id)
+;          (throw (InvalidTopologyException.
+;                   (str id " is not a valid stream id"))))))
+    ))
+
+
+(defn validate-basic!
+  "Does basic validation on the Topology."
+  [^StormTopology topology]
+  (validate-ids! topology)
+  (doseq [spout (-> topology .getSpouts vals)]
+    ; inputs of spouts should be empty
+    (if-not (empty? (-> spout .getCommon .getInputs))
+      (throw (InvalidTopologyException. "May not declare inputs for a spout"))))
+  (doseq [[comp-key comp] (all-components topology)
+          :let [conf (component-conf comp)
+                parallelism (-> comp .getCommon .getParallelismHint)]]
+    ; if number of tasks is more than 0
+    ; and parallelismHint is set
+    ; parallelism hint must be more than 0
+    (when (and (> (conf TOPOLOGY-TASKS) 0)
+            parallelism
+            (<= parallelism 0))
+      (throw (InvalidTopologyException. "Number of executors must be greater than 0 when number of tasks is greater than 0")))))
+;  (doseq [f thrift/SPOUT-FIELDS
+;          obj (->> f (.getFieldValue topology) vals)]
+;    (if-not (empty? (-> obj .get_common .get_inputs))
+;      (throw (InvalidTopologyException. "May not declare inputs for a spout"))))
+;  (doseq [[comp-id comp] (all-components topology)
+;          :let [conf (component-conf comp)
+;                p (-> comp .get_common thrift/parallelism-hint)]]
+;    (when (and (> (conf TOPOLOGY-TASKS) 0)
+;            p
+;            (<= p 0))
+;      (throw (InvalidTopologyException. "Number of executors must be greater than 0 when number of tasks is greater than 0"))
+;      )))
+
+
+(defn system-topology!
+  "Returns a system topology. (ackers etc. added to original)"
+  [storm-conf ^StormTopology topology]
+  (validate-basic! topology)
+  (let [ret (.deepCopy topology)]
+    ; we do not need ackers, but see if there is anything vital there
+    (add-acker! storm-conf ret)
+    ; add the rest if vital
+;    (add-metric-components! storm-conf ret)
+;    (add-system-components! storm-conf ret)
+;    (add-metric-streams! ret)
+;    (add-system-streams! ret)
+    (validate-structure! ret)
+    ret
+    ))
+
+
+(defn num-start-executors
+  "Returns the number of executors to start with."
+  [component]
+  (-> component .getCommon .getParallelismHint))
+
+
+(defn component-conf
+  "Get configuration of a component."
+  [component]
+  (clojurify-structure (-> component .getCommon .getConf)))
+
+
+(defn all-components
+  "Retrieves all components of a topology."
+  [^StormTopology topology]
+  (merge (.getBolts topology) (.getSpouts topology)))

@@ -22,97 +22,41 @@
  */
 package backtype.storm.generated;
 
-import java.util.HashMap;
+import com.google.common.collect.ImmutableMap;
+
 import java.util.Map;
 
 public class ComponentCommon implements java.io.Serializable, Cloneable {
-  private Map<GlobalStreamId, Grouping> inputs;
-  private Map<String, StreamInfo> streams;
-  private int parallelismHint;
-  private String jsonConf;
+  private final ImmutableMap<GlobalStreamId, Grouping> inputs;
+  private final ImmutableMap<String, StreamInfo> streams;
+  private final ImmutableMap<String, Object> conf;
+  private final Number parallelismHint;
 
-  public void putToInputs(GlobalStreamId key, Grouping val) {
-    if (this.inputs == null) {
-      this.inputs = new HashMap<GlobalStreamId,Grouping>();
-    }
-    this.inputs.put(key, val);
-  }
-
-  public ComponentCommon() {
-
-  }
-
-  /**
-   * This serves as clone
-   * TODO: StreamInfo needs clone
-   */
-  public ComponentCommon(ComponentCommon other) {
-    if (other.getInputs() != null) {
-      Map<GlobalStreamId, Grouping> __this__inputs = new HashMap<GlobalStreamId, Grouping>();
-      for (Map.Entry<GlobalStreamId, Grouping> other_element : other.inputs.entrySet()) {
-
-        GlobalStreamId other_element_key = other_element.getKey();
-        Grouping other_element_value = other_element.getValue();
-
-        GlobalStreamId __this__inputs_copy_key = new GlobalStreamId(other_element_key);
-
-        Grouping __this__inputs_copy_value = new Grouping(other_element_value);
-
-        __this__inputs.put(__this__inputs_copy_key, __this__inputs_copy_value);
-      }
-      this.inputs = __this__inputs;
-    }
-    if (other.getStreams() != null) {
-      Map<String, StreamInfo> __this__streams = new HashMap<String, StreamInfo>();
-      for (Map.Entry<String, StreamInfo> other_element : other.streams.entrySet()) {
-
-        String other_element_key = other_element.getKey();
-        StreamInfo other_element_value = other_element.getValue();
-
-        String __this__streams_copy_key = other_element_key;
-
-        StreamInfo __this__streams_copy_value = new StreamInfo(other_element_value);
-
-        __this__streams.put(__this__streams_copy_key, __this__streams_copy_value);
-      }
-      this.streams = __this__streams;
-    }
-    this.parallelismHint = other.getParallelismHint();
-    if (other.getJsonConf() != null) {
-      this.jsonConf = other.getJsonConf();
-    }
+  public ComponentCommon(Map<GlobalStreamId, Grouping> inputs,
+                         Map<String, StreamInfo> streams,
+                         Number parallelismHint,
+                         Map<String, Object> conf) {
+    this.inputs = ImmutableMap.copyOf(inputs);
+    this.streams = ImmutableMap.copyOf(streams);
+    this.conf = ImmutableMap.copyOf(conf);
+    this.parallelismHint = parallelismHint;
   }
 
   public Map<GlobalStreamId, Grouping> getInputs() {
     return inputs;
   }
 
-  public void setInputs(Map<GlobalStreamId, Grouping> inputs) {
-    this.inputs = inputs;
-  }
-
   public Map<String, StreamInfo> getStreams() {
     return streams;
   }
 
-  public void setStreams(Map<String, StreamInfo> streams) {
-    this.streams = streams;
-  }
-
-  public int getParallelismHint() {
+  public Number getParallelismHint() {
     return parallelismHint;
   }
 
-  public void setParallelismHint(int parallelismHint) {
-    this.parallelismHint = parallelismHint;
+  public Map getConf() {
+    return conf;
   }
 
-  public String getJsonConf() {
-    return jsonConf;
-  }
-
-  public void setJsonConf(String jsonConf) {
-    this.jsonConf = jsonConf;
-  }
 }
 

@@ -109,12 +109,14 @@
   []
   (clojurify-structure (Utils/readDefaultConfig)))
 
+
 (defn validate-configs-with-schemas
   [conf]
   (doseq [[k v] conf
           :let [schema (CONFIG-SCHEMA-MAP k)]]
     (if (not (nil? schema))
       (.validateField schema k v))))
+
 
 (defn read-storm-config
   "Reads the Storm config file from disk."

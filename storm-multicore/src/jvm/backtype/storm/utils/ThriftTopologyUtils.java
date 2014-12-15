@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class ThriftTopologyUtils {
+
     public static Set<String> getComponentIds(StormTopology topology) {
         Set<String> ret = new HashSet<String>();
         ret.addAll(topology.getBolts().keySet());

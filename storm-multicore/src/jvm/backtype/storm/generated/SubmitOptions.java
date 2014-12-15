@@ -1,7 +1,15 @@
 package backtype.storm.generated;
 
 public class SubmitOptions {
-  private TopologyInitialStatus initialStatus;
+  private final TopologyInitialStatus initialStatus;
+
+  public TopologyInitialStatus getInitialStatus() {
+    return initialStatus;
+  }
+
+  public SubmitOptions(TopologyInitialStatus initialStatus) {
+    this.initialStatus = initialStatus;
+  }
 
   public enum TopologyInitialStatus {
     ACTIVE(1),

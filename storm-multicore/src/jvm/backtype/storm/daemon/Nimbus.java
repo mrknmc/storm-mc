@@ -29,13 +29,15 @@ import backtype.storm.generated.KillOptions;
 import backtype.storm.generated.StormTopology;
 import backtype.storm.generated.SubmitOptions;
 
+import java.util.Map;
+
 public class Nimbus {
 
   public interface Iface {
 
-    public void submitTopology(String name, String jsonConf, StormTopology topology) throws AlreadyAliveException, InvalidTopologyException;
+    public void submitTopology(String name, Map conf, StormTopology topology) throws AlreadyAliveException, InvalidTopologyException;
 
-    public void submitTopologyWithOpts(String name, String jsonConf, StormTopology topology, SubmitOptions options) throws AlreadyAliveException, InvalidTopologyException;
+    public void submitTopologyWithOpts(String name, Map conf, StormTopology topology, SubmitOptions options) throws AlreadyAliveException, InvalidTopologyException;
 
     public void killTopology(String name) throws NotAliveException, org.apache.thrift.TException;
 

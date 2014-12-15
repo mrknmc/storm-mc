@@ -54,7 +54,8 @@ public class Grouping {
    */
   public Grouping(Grouping other) {
     Grouping ret = new Grouping(other.getType());
-    ret.setFields(other.getFields());
+    List<String> fieldsCopy = new ArrayList<String>(other.getFields());
+    ret.setFields(fieldsCopy);
   }
 
   public Grouping(List<String> fields) {
@@ -96,7 +97,7 @@ public class Grouping {
     return new Grouping(GroupingType.LOCAL_OR_SHUFFLE);
   }
 
-  private enum GroupingType {
+  public enum GroupingType {
     FIELDS,
     SHUFFLE,
     ALL,
