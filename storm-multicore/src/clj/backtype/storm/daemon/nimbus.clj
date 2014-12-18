@@ -803,14 +803,16 @@
   (-> nimbus :storm-cluster-state (.storm-base storm-id nil) :status))
 
 
-(defn storm-active? [storm-cluster-state storm-name]
+(defn storm-active?
   "Checks whether storm is active by checking whether id is nil."
+  [storm-cluster-state storm-name]
   ; get-storm-id is in common.clj
   (not-nil? (get-storm-id storm-cluster-state storm-name)))
 
 
-(defn check-storm-active! [nimbus storm-name active?]
+(defn check-storm-active!
   "Checks that the status of the Storm is equal to what is passed in."
+  [nimbus storm-name active?]
   (if (= (not active?)
         (storm-active? (:storm-cluster-state nimbus)
           storm-name))
@@ -1098,4 +1100,3 @@
   (reify INimbus
     (prepare [this conf ]
       )))
-

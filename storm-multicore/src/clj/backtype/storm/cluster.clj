@@ -77,8 +77,9 @@
 
       (active-storms
         [this]
-        ; Return storm ids that are running
-        (keys @active-storms-map))
+        ;; Return storm ids that are running
+        ;; or empty if none are running.
+        (or (keys @active-storms-map) []))
 
       (activate-storm!
         [this storm-id storm-base]
@@ -104,7 +105,7 @@
 
       (remove-storm-base!
         [this storm-id]
-        )
+        (swap! active-storms-map dissoc storm-id))
 ;        (delete-node cluster-state (storm-path storm-id)))
 
       (set-assignment!

@@ -192,9 +192,3 @@
          (throw t#))
        (finally
          (kill-local-storm-cluster ~cluster-sym)))))
-
-
-; main entry point
-;(with-local-cluster [cluster]
-;  (let [nimbus (:nimbus cluster)]
-;    (.submitTopology nimbus "lol" {} topology)))
