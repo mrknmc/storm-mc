@@ -27,7 +27,6 @@ public class StormTopology {
   }
 
   /**
-   *
    * @param topology
    * @param conf
    * @return

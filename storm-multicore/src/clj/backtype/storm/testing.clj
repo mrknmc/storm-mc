@@ -195,6 +195,6 @@
 
 
 ; main entry point
-(testing/with-local-cluster [cluster]
-  (let [nimbus (:nimbus cluster)]
-    (.submitTopology nimbus "lol" {} testing/topology)))
+;(with-local-cluster [cluster]
+;  (let [nimbus (:nimbus cluster)]
+;    (.submitTopology nimbus "lol" {} topology)))

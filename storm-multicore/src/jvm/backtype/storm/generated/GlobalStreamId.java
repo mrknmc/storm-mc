@@ -24,36 +24,15 @@ package backtype.storm.generated;
 
 public class GlobalStreamId implements java.io.Serializable, Cloneable {
 
-  private String componentId;
-  private String streamId;
+  private final String componentId;
+  private final String streamId;
 
   public String getComponentId() {
     return componentId;
   }
 
-  public void setComponentId(String componentId) {
-    this.componentId = componentId;
-  }
-
   public String getStreamId() {
     return streamId;
-  }
-
-  public void setStreamId(String streamId) {
-    this.streamId = streamId;
-  }
-
-  /**
-   * deepCopy
-   * @param other
-   */
-  public GlobalStreamId(GlobalStreamId other) {
-    if (other.getComponentId() != null) {
-      this.componentId = other.componentId;
-    }
-    if (other.getStreamId() != null) {
-      this.streamId = other.streamId;
-    }
   }
 
   public GlobalStreamId(String componentId, String streamId) {

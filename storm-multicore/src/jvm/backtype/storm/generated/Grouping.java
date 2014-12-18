@@ -28,73 +28,54 @@ import java.util.*;
 
 public class Grouping {
 
-  private List<String> fields; //empty list means global grouping
-  private CustomStreamGrouping customGrouping;
-  private GroupingType type;
+  private final List<String> fields; //empty list means global grouping
+  private final CustomStreamGrouping customGrouping;
+  private final GroupingType type;
 
   public GroupingType getType() {
     return type;
-  }
-
-  public void setType(GroupingType type) {
-    this.type = type;
   }
 
   public List<String> getFields() {
     return fields;
   }
 
-  public void setFields(List<String> fields) {
-    this.fields = fields;
+  public CustomStreamGrouping getCustomGrouping() {
+    return customGrouping;
   }
 
-  /**
-   * Performs a deepCopy.
-   * @param other
-   */
-  public Grouping(Grouping other) {
-    Grouping ret = new Grouping(other.getType());
-    List<String> fieldsCopy = new ArrayList<String>(other.getFields());
-    ret.setFields(fieldsCopy);
-  }
-
-  public Grouping(List<String> fields) {
-    this.fields = fields;
+  public Grouping(GroupingType type, CustomStreamGrouping customGrouping, List<String> fields) {
     this.type = GroupingType.FIELDS;
-  }
-
-  public Grouping(GroupingType type) {
-    this.type = type;
+    this.customGrouping = customGrouping;
+    this.fields = fields;
   }
 
   public static Grouping fields(List<String> fields) {
-    return new Grouping(fields);
+    return new Grouping(GroupingType.FIELDS, null, fields);
   }
 
   public static Grouping shuffle() {
-    return new Grouping(GroupingType.SHUFFLE);
+    return new Grouping(GroupingType.SHUFFLE, null, null);
   }
 
   public static Grouping all() {
-    return new Grouping(GroupingType.ALL);
+    return new Grouping(GroupingType.ALL, null, null);
   }
 
   public static Grouping none() {
-    return new Grouping(GroupingType.NONE);
+    return new Grouping(GroupingType.NONE, null, null);
   }
 
   public static Grouping direct() {
-    return new Grouping(GroupingType.DIRECT);
+    return new Grouping(GroupingType.DIRECT, null, null);
   }
 
   public static Grouping customObject(CustomStreamGrouping customGrouping) {
-    Grouping ret = new Grouping(GroupingType.CUSTOM_OBJECT);
-    ret.customGrouping = customGrouping;
-    return ret;
+    return new Grouping(GroupingType.CUSTOM_OBJECT, customGrouping, null);
   }
 
   public static Grouping localOrShuffle() {
-    return new Grouping(GroupingType.LOCAL_OR_SHUFFLE);
+    return new Grouping(GroupingType.LOCAL_OR_SHUFFLE, null, null);
   }
 
   public enum GroupingType {
