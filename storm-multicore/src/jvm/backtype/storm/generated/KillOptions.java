@@ -24,7 +24,19 @@ package backtype.storm.generated;
 
 public class KillOptions implements java.io.Serializable, Cloneable {
 
-  private int waitSecs;
+  private final int waitSecs;
+
+  public int getWaitSecs() {
+    return waitSecs;
+  }
+
+  public KillOptions() {
+    this.waitSecs = 0;
+  }
+
+  public KillOptions(int waitSecs) {
+    this.waitSecs = waitSecs;
+  }
 
 }
 

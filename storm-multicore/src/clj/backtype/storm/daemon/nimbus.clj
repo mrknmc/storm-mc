@@ -18,9 +18,10 @@
 ;  (:import [org.apache.thrift.protocol TBinaryProtocol TBinaryProtocol$Factory])
 ;  (:import [org.apache.thrift.exception])
 ;  (:import [org.apache.thrift.transport TNonblockingServerTransport TNonblockingServerSocket])
+  (:import [org.apache.commons.io FileUtils])
   (:import [java.nio ByteBuffer])
   (:import [java.util Map])
-  (:import [java.io FileNotFoundException])
+  (:import [java.io File FileNotFoundException])
   (:import [java.nio.channels Channels WritableByteChannel])
 ;  (:use [backtype.storm.scheduler.DefaultScheduler])
   (:require [backtype.storm.cluster :as cluster])
@@ -31,7 +32,7 @@
             SubmitOptions$TopologyInitialStatus KillOptions])
   (:import [backtype.storm.scheduler INimbus])
   (:import [backtype.storm.generated Nimbus Nimbus$Iface])
-  (:import [backtype.storm.utils ThriftTopologyUtils])
+  (:import [backtype.storm.utils Utils ThriftTopologyUtils])
   (:import [backtype.storm.daemon.common StormBase])
 ;  (:import [backtype.storm.scheduler INimbus SupervisorDetails WorkerSlot TopologyDetails
 ;            Cluster Topologies SchedulerAssignment SchedulerAssignmentImpl DefaultScheduler ExecutorDetails])
@@ -54,150 +55,10 @@
 ;    ))
 ;
 ;
-;(defn- read-storm-conf [conf storm-id]
-;  (let [stormroot (master-stormdist-root conf storm-id)]
-;    (merge conf
-;      (Utils/deserialize
-;        (FileUtils/readFileToByteArray
-;          (File. (master-stormconf-path stormroot))
-;          )))))
-;
 ;
 ;(declare delay-event)
 ;(declare mk-assignments)
 ;
-;(defn kill-transition [nimbus storm-id]
-;  (fn [kill-time]
-;    (let [delay (if kill-time
-;                  kill-time
-;                  (get (read-storm-conf (:conf nimbus) storm-id)
-;                    TOPOLOGY-MESSAGE-TIMEOUT-SECS))]
-;      (delay-event nimbus
-;        storm-id
-;        delay
-;        :remove)
-;      {:type :killed
-;       :kill-time-secs delay})
-;    ))
-;
-;(defn rebalance-transition [nimbus storm-id status]
-;  (fn [time num-workers executor-overrides]
-;    (let [delay (if time
-;                  time
-;                  (get (read-storm-conf (:conf nimbus) storm-id)
-;                    TOPOLOGY-MESSAGE-TIMEOUT-SECS))]
-;      (delay-event nimbus
-;        storm-id
-;        delay
-;        :do-rebalance)
-;      {:type :rebalancing
-;       :delay-secs delay
-;       :old-status status
-;       :num-workers num-workers
-;       :executor-overrides executor-overrides
-;       })))
-;
-;(defn do-rebalance [nimbus storm-id status]
-;  (.update-storm! (:storm-cluster-state nimbus)
-;    storm-id
-;    (assoc-non-nil
-;      {:component->executors (:executor-overrides status)}
-;      :num-workers
-;      (:num-workers status)))
-;  (mk-assignments nimbus :scratch-topology-id storm-id))
-;
-;(defn state-transitions
-;  "Map of states to a map of events to states."
-;  [nimbus storm-id status]
-;  {:active {:inactivate :inactive
-;            :activate nil
-;            :rebalance (rebalance-transition nimbus storm-id status)
-;            :kill (kill-transition nimbus storm-id)
-;            }
-;   :inactive {:activate :active
-;              :inactivate nil
-;              :rebalance (rebalance-transition nimbus storm-id status)
-;              :kill (kill-transition nimbus storm-id)
-;              }
-;   :killed {:startup (fn [] (delay-event nimbus
-;                              storm-id
-;                              (:kill-time-secs status)
-;                              :remove)
-;                            nil)
-;            :kill (kill-transition nimbus storm-id)
-;            :remove (fn []
-;                      (log-message "Killing topology: " storm-id)
-;                      (.remove-storm! (:storm-cluster-state nimbus)
-;                        storm-id)
-;                      nil)
-;            }
-;   :rebalancing {:startup (fn [] (delay-event nimbus
-;                                   storm-id
-;                                   (:delay-secs status)
-;                                   :do-rebalance)
-;                                 nil)
-;                 :kill (kill-transition nimbus storm-id)
-;                 :do-rebalance (fn []
-;                                 (do-rebalance nimbus storm-id status)
-;                                 (:old-status status))
-;                 }})
-;
-;
-;
-;(defn transition!
-;  "Transition Storm with storm-id to a state."
-;  ([nimbus storm-id event]
-;   (transition! nimbus storm-id event false))
-;  ([nimbus storm-id event error-on-no-transition?]
-;   ;; lock the submit-lock so only one submission at a time
-;   (locking (:submit-lock nimbus)
-;     (let [system-events #{:startup}
-;           ;; event can be a keyword (:startup) or a list/vector
-;           [event & event-args] (if (keyword? event) [event] event)
-;           status (topology-status nimbus storm-id)]
-;       ;; handles the case where event was scheduled but topology has been removed
-;       (if-not status
-;         (log-message "Cannot apply event " event " to " storm-id " because topology no longer exists")
-;         ;; m and e stand for map and event here
-;         (let [get-event (fn [m e]
-;                           (if (contains? m e)
-;                             (m e)
-;                             (let [msg (str "No transition for event: " event
-;                                                                        ", status: " status,
-;                                                                        " storm-id: " storm-id)]
-;                               (if error-on-no-transition?
-;                                 (throw-runtime msg)
-;                                 (do (when-not (contains? system-events event)
-;                                       (log-message msg))
-;                                   nil))
-;                               )))
-;               transition (-> (state-transitions nimbus storm-id status)
-;                            (get (:type status))
-;                            (get-event event))
-;               transition (if (or (nil? transition)
-;                                (keyword? transition))
-;                            (fn [] transition)
-;                            transition)
-;               new-status (apply transition event-args)
-;               new-status (if (keyword? new-status)
-;                            {:type new-status}
-;                            new-status)]
-;           (when new-status
-;             (set-topology-status! nimbus storm-id new-status)))))
-;     )))
-;
-;(defn transition-name! [nimbus storm-name event & args]
-;  (let [storm-id (get-storm-id (:storm-cluster-state nimbus) storm-name)]
-;    (when-not storm-id
-;      (throw (NotAliveException. storm-name)))
-;    (apply transition! nimbus storm-id event args)))
-;
-;(defn delay-event [nimbus storm-id delay-secs event]
-;  (log-message "Delaying event " event " for " delay-secs " secs for " storm-id)
-;  (schedule (:timer nimbus)
-;    delay-secs
-;    #(transition! nimbus storm-id event false)
-;    ))
 ;
 ;;; active -> reassign in X secs
 ;
@@ -697,8 +558,230 @@
 ;  )
 
 
+(defn- read-storm-conf
+  "Read the storm config file."
+  [conf storm-id]
+  (let [stormroot (master-stormdist-root conf storm-id)]
+    (merge conf
+      (Utils/deserialize
+        (FileUtils/readFileToByteArray
+          (File. (master-stormconf-path stormroot))
+          )))))
 
-; Might be useful
+
+; commented out until I port Cluster, Topologies etc.
+;(defn mk-scheduler
+;  "Make a scheduler for a Nimbus obj and prepare it."
+;  [conf inimbus]
+;  (let [forced-scheduler (.getForcedScheduler inimbus)
+;        scheduler (cond
+;                    forced-scheduler
+;                    (do (log-message "Using forced scheduler from INimbus " (class forced-scheduler))
+;                      forced-scheduler)
+;
+;                    (conf STORM-SCHEDULER)
+;                    (do (log-message "Using custom scheduler: " (conf STORM-SCHEDULER))
+;                      (-> (conf STORM-SCHEDULER) new-instance))
+;
+;                    :else (do (log-message "Using default scheduler")
+;                            (DefaultScheduler.)))]
+;    (.prepare scheduler conf)
+;    scheduler
+;    ))
+
+
+;; declared here because cyclic dependency
+(declare delay-event)
+
+
+(defn get-storm-id
+  "Retrieve an id of a topology, given a name."
+  [storm-cluster-state storm-name]
+  (let [active-storms (.active-storms storm-cluster-state)]
+    (find-first
+      #(= storm-name (:storm-name (.storm-base storm-cluster-state % nil)))
+      active-storms)
+    ))
+
+
+(defn do-rebalance
+  "Re-makes assignments."
+  [nimbus storm-id status]
+  (.update-storm! (:storm-cluster-state nimbus)
+    storm-id
+    (assoc-non-nil
+      {:component->executors (:executor-overrides status)}
+      :num-workers (:num-workers status))))
+;; commented out for now
+;  (mk-assignments nimbus :scratch-topology-id storm-id))
+
+
+(defn rebalance-transition
+  "Produces a rebalance transition function."
+  [nimbus storm-id status]
+  (fn [time num-workers executor-overrides]
+    (let [delay (if time
+                  time
+                  (get (read-storm-conf (:conf nimbus) storm-id)
+                    TOPOLOGY-MESSAGE-TIMEOUT-SECS))]
+      (delay-event nimbus
+        storm-id
+        delay
+        :do-rebalance)
+      {:type :rebalancing
+       :delay-secs delay
+       :old-status status
+       :num-workers num-workers
+       :executor-overrides executor-overrides
+       })))
+
+
+(defn kill-transition
+  "Produces a kill transition function."
+  [nimbus storm-id]
+  (fn [kill-time]
+    (let [delay (if kill-time
+                  kill-time
+                  ;; do we need to read the file from disk here?
+                  (get (read-storm-conf (:conf nimbus) storm-id)
+                    TOPOLOGY-MESSAGE-TIMEOUT-SECS))]
+      (delay-event nimbus
+        storm-id
+        delay
+        :remove)
+      {:type :killed
+       :kill-time-secs delay})
+    ))
+
+
+(defn topology-status
+  "Get status of a topology."
+  [nimbus storm-id]
+  (-> nimbus :storm-cluster-state (.storm-base storm-id nil) :status))
+
+
+(defn set-topology-status!
+  "Set the status of a topology."
+  [nimbus storm-id status]
+  (let [storm-cluster-state (:storm-cluster-state nimbus)]
+    (.update-storm! storm-cluster-state
+      storm-id
+      {:status status})
+    (log-message "Updated " storm-id " with status " status)
+    ))
+
+
+(defn state-transitions
+  "Map of states to a map of events to states."
+  [nimbus storm-id status]
+  {:active {:inactivate :inactive
+            :activate nil
+            :rebalance (rebalance-transition nimbus storm-id status)
+            :kill (kill-transition nimbus storm-id)
+            }
+   :inactive {:activate :active
+              :inactivate nil
+              :rebalance (rebalance-transition nimbus storm-id status)
+              :kill (kill-transition nimbus storm-id)
+              }
+   :killed {:startup (fn [] (delay-event nimbus
+                              storm-id
+                              (:kill-time-secs status)
+                              :remove)
+                       nil)
+            :kill (kill-transition nimbus storm-id)
+            :remove (fn []
+                      (log-message "Killing topology: " storm-id)
+                      (.remove-storm! (:storm-cluster-state nimbus)
+                        storm-id)
+                      nil)
+            }
+   :rebalancing {:startup (fn [] (delay-event nimbus
+                                   storm-id
+                                   (:delay-secs status)
+                                   :do-rebalance)
+                            nil)
+                 :kill (kill-transition nimbus storm-id)
+                 :do-rebalance (fn []
+                                 (do-rebalance nimbus storm-id status)
+                                 (:old-status status))
+                 }})
+
+
+(defn transition!
+  "Transition Storm with storm-id to a state."
+  ([nimbus storm-id event]
+   (transition! nimbus storm-id event false))
+  ([nimbus storm-id event error-on-no-transition?]
+   ;; lock the submit-lock so only one submission at a time
+   (locking (:submit-lock nimbus)
+     (let [system-events #{:startup}
+           ;; event can be a keyword (:startup) or a list/vector
+           [event & event-args] (if (keyword? event) [event] event)
+           status (topology-status nimbus storm-id)]
+       (if-not status
+         ;; handles the case where event was scheduled but topology has been removed
+         (log-message "Cannot apply event " event " to " storm-id " because topology no longer exists")
+         ;; m and e stand for map and event here
+         (let [get-event (fn [m e]
+                           (if (contains? m e)
+                             ;; if the event is reachable return it
+                             (m e)
+                             ;; if not, log or not depending on conf
+                             (let [msg (str "No transition for event: " event
+                                         ", status: " status,
+                                         " storm-id: " storm-id)]
+                               (if error-on-no-transition?
+                                 (throw-runtime msg)
+                                 (do (when-not (contains? system-events event)
+                                       (log-message msg))
+                                   nil))
+                               )))
+               transition (->
+                            ;; get all possible transitions
+                            (state-transitions nimbus storm-id status)
+                            ;; get transitions reachable from current state
+                            (get (:type status))
+                            ;; get form corresponding to current event
+                            (get-event event))
+               transition (if (or (nil? transition)
+                                (keyword? transition))
+                            ;; if it's nil or a keyword make a fn that returns it
+                            (fn [] transition)
+                            ;; otherwise use it
+                            transition)
+               ;; new status is whatever we get when we apply the transition function
+               new-status (apply transition event-args)
+               ;; if the new status is a keyword, we wrap it in a map
+               new-status (if (keyword? new-status)
+                            {:type new-status}
+                            new-status)]
+           ;; if the new status it not nil, we update the topology
+           (when new-status
+             (set-topology-status! nimbus storm-id new-status)))))
+     )))
+
+
+(defn delay-event
+  "Delays an event (transition) for some number of seconds."
+  [nimbus storm-id delay-secs event]
+  (log-message "Delaying event " event " for " delay-secs " secs for " storm-id)
+  (schedule (:timer nimbus)
+    delay-secs
+    #(transition! nimbus storm-id event false)
+    ))
+
+
+(defn transition-name!
+  "Transition a topology with a given name."
+  [nimbus storm-name event & args]
+  (let [storm-id (get-storm-id (:storm-cluster-state nimbus) storm-name)]
+    (when-not storm-id
+      (throw (NotAliveException. storm-name)))
+    (apply transition! nimbus storm-id event args)))
+
+
+;; TODO: this can be probably removed.
 (defn mapify-serializations [sers]
   (->> sers
     (map (fn [e] (if (map? e) e {e nil})))
@@ -787,22 +870,6 @@
 ;  (StormTopology. newSpouts newBolts)))
 
 
-(defn get-storm-id
-  "Retrieve an id of a topology, given a name."
-  [storm-cluster-state storm-name]
-  (let [active-storms (.active-storms storm-cluster-state)]
-    (find-first
-      #(= storm-name (:storm-name (.storm-base storm-cluster-state % nil)))
-      active-storms)
-    ))
-
-
-(defn topology-status
-  "Get status of a topology."
-  [nimbus storm-id]
-  (-> nimbus :storm-cluster-state (.storm-base storm-id nil) :status))
-
-
 (defn storm-active?
   "Checks whether storm is active by checking whether id is nil."
   [storm-cluster-state storm-name]
@@ -822,17 +889,6 @@
     ))
 
 
-(defn set-topology-status!
-  "Set the status of a topology."
-  [nimbus storm-id status]
-  (let [storm-cluster-state (:storm-cluster-state nimbus)]
-    (.update-storm! storm-cluster-state
-      storm-id
-      {:status status})
-    (log-message "Updated " storm-id " with status " status)
-    ))
-
-
 (def DISALLOWED-TOPOLOGY-NAME-STRS #{"/" "." ":" "\\"})
 
 (defn validate-topology-name! [name]
@@ -843,27 +899,6 @@
     (if (clojure.string/blank? name)
       (throw (InvalidTopologyException.
                ("Topology name cannot be blank"))))))
-
-
-; commented out until I port Cluster, Topologies etc.
-;(defn mk-scheduler
-;  "Make a scheduler for a Nimbus obj and prepare it."
-;  [conf inimbus]
-;  (let [forced-scheduler (.getForcedScheduler inimbus)
-;        scheduler (cond
-;                    forced-scheduler
-;                    (do (log-message "Using forced scheduler from INimbus " (class forced-scheduler))
-;                      forced-scheduler)
-;
-;                    (conf STORM-SCHEDULER)
-;                    (do (log-message "Using custom scheduler: " (conf STORM-SCHEDULER))
-;                      (-> (conf STORM-SCHEDULER) new-instance))
-;
-;                    :else (do (log-message "Using default scheduler")
-;                            (DefaultScheduler.)))]
-;    (.prepare scheduler conf)
-;    scheduler
-;    ))
 
 
 (defn nimbus-data
@@ -961,13 +996,11 @@
       (^void killTopology [this ^String name]
        (.killTopologyWithOpts this name (KillOptions.)))
 
-;      (^void killTopologyWithOpts [this ^String storm-name ^KillOptions options]
-;       (check-storm-active! nimbus storm-name true)
-;       (let [wait-amt (if (.is_set_wait_secs options)
-;                        (.get_wait_secs options)
-;                        )]
-;         (transition-name! nimbus storm-name [:kill wait-amt] true)
-;         ))
+      (^void killTopologyWithOpts [this ^String storm-name ^KillOptions options]
+        (check-storm-active! nimbus storm-name true)
+        (let [wait-amt (.getWaitSecs options)]
+          (transition-name! nimbus storm-name [:kill wait-amt] true)
+          ))
 
 ;      (^void rebalance [this ^String storm-name ^RebalanceOptions options]
 ;       (check-storm-active! nimbus storm-name true)
@@ -987,15 +1020,14 @@
 
       (activate [this storm-name]
         )
-;        (transition-name! nimbus storm-name :activate true)
-;        )
+;        (transition-name! nimbus storm-name :activate true))
 
       (deactivate [this storm-name]
         )
 ;        (transition-name! nimbus storm-name :inactivate true))
 
-      (^String getNimbusConf [this]
-       (to-json (:conf nimbus)))
+      (getNimbusConf [this]
+        (:conf nimbus))
 
       (^String getTopologyConf [this ^String id]
         )
