@@ -111,6 +111,8 @@
     (.interrupt (:timer-thread timer)))
   (.acquire (:cancel-notifier timer)))
 
+
 (defn timer-waiting?
+  "Check if timer is waiting on something."
   [timer]
   (Time/isThreadWaiting (:timer-thread timer)))

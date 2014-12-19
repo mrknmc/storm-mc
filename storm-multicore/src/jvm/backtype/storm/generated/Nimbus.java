@@ -39,21 +39,21 @@ public class Nimbus {
 
     public void submitTopologyWithOpts(String name, Map conf, StormTopology topology, SubmitOptions options) throws AlreadyAliveException, InvalidTopologyException;
 
-    public void killTopology(String name) throws NotAliveException, org.apache.thrift.TException;
+    public void killTopology(String name) throws NotAliveException;
 
-    public void killTopologyWithOpts(String name, KillOptions options) throws NotAliveException, org.apache.thrift.TException;
+    public void killTopologyWithOpts(String name, KillOptions options) throws NotAliveException;
 
-    public void activate(String name) throws NotAliveException, org.apache.thrift.TException;
+    public void activate(String name) throws NotAliveException;
 
-    public void deactivate(String name) throws NotAliveException, org.apache.thrift.TException;
+    public void deactivate(String name) throws NotAliveException;
 
-    public String getNimbusConf() throws org.apache.thrift.TException;
+    public Map getNimbusConf();
 
-//    public ClusterSummary getClusterInfo() throws org.apache.thrift.TException;
+//    public ClusterSummary getClusterInfo();
 
-//    public TopologyInfo getTopologyInfo(String id) throws NotAliveException, org.apache.thrift.TException;
+//    public TopologyInfo getTopologyInfo(String id) throws NotAliveException;
 
-    public String getTopologyConf(String id) throws NotAliveException;
+    public Map getTopologyConf(String id) throws NotAliveException;
 
     public StormTopology getTopology(String id) throws NotAliveException;
 

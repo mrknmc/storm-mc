@@ -601,6 +601,7 @@
     (concat b (rest e))))
 
 (defn assoc-non-nil
+  "Performs assoc if value is not nil."
   [m k v]
   (if v (assoc m k v) m))
 
@@ -775,7 +776,9 @@
   (* 1000 (long secs)))
 
 
-(defn throw-runtime [& strs]
+(defn throw-runtime
+  "Throw a run time exception."
+  [& strs]
   (throw (RuntimeException. (apply str strs))))
 
 

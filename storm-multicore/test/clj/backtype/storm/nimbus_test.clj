@@ -63,8 +63,8 @@
     ))
 
 
-(deftest test-normalize-conf
-  ;; Test whether normalizing conf works
-  (let [normed-conf (normalize-conf (read-storm-config) topology)]
-    )
-  )
+;(deftest test-normalize-conf
+;  ;; Test whether normalizing conf works
+;  (let [normed-conf (normalize-conf (read-storm-config) topology)]
+;    )
+;  )
