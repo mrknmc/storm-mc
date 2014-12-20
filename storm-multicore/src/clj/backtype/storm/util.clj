@@ -285,6 +285,7 @@
   (toks->path (tokenize-path path)))
 
 (defn map-val
+  "Apply the function to the val of a map."
   [afn amap]
   (into {}
         (for [[k v] amap]
@@ -821,6 +822,7 @@
 
 
 (defn join-maps
+  "{2 3} {5 6} -> {2 (3 nil), 5 (nil 6)}"
   [& maps]
   (let [all-keys (apply set/union (for [m maps] (-> m keys set)))]
     (into {} (for [k all-keys]
@@ -828,6 +830,7 @@
 
 
 (defn partition-fixed
+  "3 [1 2 3 4 5 6 7] -> [(1 2 3) (4 5) (6 7)]"
   [max-num-chunks aseq]
   (if (zero? max-num-chunks)
     []

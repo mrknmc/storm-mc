@@ -209,18 +209,6 @@
 ;
 ;
 ;
-;(defn storm-task-info
-;  "Returns map from task -> component id"
-;  [^StormTopology user-topology storm-conf]
-;  (->> (system-topology! storm-conf user-topology)
-;       all-components
-;       (map-val (comp #(get % TOPOLOGY-TASKS) component-conf))
-;       (sort-by first)
-;       (mapcat (fn [[c num-tasks]] (repeat num-tasks c)))
-;       (map (fn [id comp] [id comp]) (iterate (comp int inc) (int 1)))
-;       (into {})
-;       ))
-;
 ;(defn executor-id->tasks [[first-task-id last-task-id]]
 ;  (->> (range first-task-id (inc last-task-id))
 ;       (map int)))
@@ -281,7 +269,7 @@
 
 
 (defn all-components
-  "Retrieves all components of a topology."
+  "Retrieves all components of a topology in a id->component map."
   [^StormTopology topology]
   (apply merge {} (.getBolts topology) (.getSpouts topology)))
 
@@ -420,4 +408,23 @@
 ;    (add-system-streams! ret)
     (validate-structure! ret)
     ret
+    ))
+
+
+(defn storm-task-info
+  "Returns map from task -> component id"
+  [^StormTopology user-topology storm-conf]
+  (->> (system-topology! storm-conf user-topology)
+    ;; get all components
+    all-components
+    ;; make a map of id -> num-tasks
+    (map-val (comp #(get % TOPOLOGY-TASKS) component-conf))
+    ;; sorts by the key (id of the component)
+    (sort-by first)
+    ;; for each component id creates num-tasks copies of it
+    ;; and concats the whole thing together
+    (mapcat (fn [[c num-tasks]] (repeat num-tasks c)))
+    ;; adds an int from 1..infinity as a key for the component ids
+    (map (fn [id comp] [id comp]) (iterate (comp int inc) (int 1)))
+    (into {})
     ))

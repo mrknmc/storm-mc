@@ -56,6 +56,7 @@
         assignment-info-callback (atom {})
         supervisors-callback (atom nil)
         assignments-callback (atom nil)
+        assignments (atom {})
         storm-base-callback (atom {})
         ;; store active storms in a set
         active-storms-map (atom {})
@@ -66,13 +67,15 @@
       (assignments
         [this callback]
         (when callback
-          (reset! assignments-callback callback)))
+          (reset! assignments-callback callback))
+        (or (keys @assignments) []))
 ;        (get-children cluster-state ASSIGNMENTS-SUBTREE (not-nil? callback)))
 
       (assignment-info
         [this storm-id callback]
         (when callback
-          (swap! assignment-info-callback assoc storm-id callback)))
+          (swap! assignment-info-callback assoc storm-id callback))
+        (@assignments storm-id))
 ;        (maybe-deserialize (get-data cluster-state (assignment-path storm-id) (not-nil? callback))))
 
       (active-storms
@@ -110,11 +113,12 @@
 
       (set-assignment!
         [this storm-id info]
-        )
+        (swap! assignments assoc storm-id info))
 ;        (set-data cluster-state (assignment-path storm-id) (Utils/serialize info)))
 
       (remove-storm!
         [this storm-id]
+        (swap! assignments dissoc storm-id)
 ;        (delete-node cluster-state (assignment-path storm-id))
         (remove-storm-base! this storm-id)))))
 
