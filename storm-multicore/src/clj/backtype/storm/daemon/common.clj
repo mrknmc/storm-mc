@@ -39,10 +39,6 @@
 ;(def METRICS-STREAM-ID Constants/METRICS_STREAM_ID)
 ;(def METRICS-TICK-STREAM-ID Constants/METRICS_TICK_STREAM_ID)
 ;
-;;; the task id is the virtual port
-;;; node->host is here so that tasks know who to talk to just from assignment
-;;; this avoid situation where node goes down and task doesn't know what to do information-wise
-;(defrecord Assignment [master-code-dir node->host executor->node+port executor->start-time-secs])
 ;
 ;
 ;
@@ -237,6 +233,12 @@
 
 
 ; Stuff below here should be ok
+
+
+;;; the task id is the virtual port
+;;; node->host is here so that tasks know who to talk to just from assignment
+;;; this avoid situation where node goes down and task doesn't know what to do information-wise
+(defrecord Assignment [master-code-dir node->host executor->node+port executor->start-time-secs])
 
 
 (defprotocol DaemonCommon
