@@ -267,6 +267,7 @@
 (defn component-conf
   "Get configuration of a component."
   [component]
+;  (clojurify-structure (.getConf (.getCommon component))))
   (clojurify-structure (-> component .getCommon .getConf)))
 
 
@@ -399,8 +400,8 @@
   "Returns a system topology. (ackers etc. added to original)"
   [storm-conf ^StormTopology topology]
   (validate-basic! topology)
+  topology)
 ;  (let [ret (.deepCopy topology)]
-  (let [ret topology]
     ; we do not need ackers, but see if there is anything vital there
 ;    (add-acker! storm-conf ret)
     ; add the rest if vital
@@ -408,9 +409,7 @@
 ;    (add-system-components! storm-conf ret)
 ;    (add-metric-streams! ret)
 ;    (add-system-streams! ret)
-    (validate-structure! ret)
-    ret
-    ))
+;    (validate-structure! ret)
 
 
 (defn storm-task-info
@@ -420,6 +419,7 @@
     ;; get all components
     all-components
     ;; make a map of id -> num-tasks
+    ;; TODO: I think TOPOLOGY-TASKS is causing a nullpointer exception here
     (map-val (comp #(get % TOPOLOGY-TASKS) component-conf))
     ;; sorts by the key (id of the component)
     (sort-by first)

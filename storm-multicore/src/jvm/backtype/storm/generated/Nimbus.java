@@ -31,7 +31,7 @@ import backtype.storm.generated.SubmitOptions;
 
 import java.util.Map;
 
-public class Nimbus {
+public class Nimbus implements java.io.Serializable {
 
   public interface Iface {
 

@@ -16,6 +16,7 @@
 
 (ns backtype.storm.testing
   (:require [backtype.storm.daemon.nimbus :as nimbus])
+;  (:require [backtype.storm.daemon.supervisor :as supervisor])
   (:import [backtype.storm.grouping CustomStreamGrouping])
   (:import [backtype.storm.generated GlobalStreamId Grouping])
   (:import [backtype.storm.utils Utils])
@@ -157,9 +158,69 @@
             ))
 
 
+(defn local-temp-path
+  "Return temp directory on the system."
+  []
+  (str (System/getProperty "java.io.tmpdir") (if-not on-windows? "/") (uuid)))
+
+
+;(defnk add-supervisor
+;  "Add supervisor to the cluster map."
+;  [cluster-map :ports 2]
+;  (let [tmp-dir (local-temp-path)
+;        port-ids (if (sequential? ports)
+;                   ports
+;                   (doall (repeatedly ports (:port-counter cluster-map))))
+;        supervisor-conf (merge (:daemon-conf cluster-map)
+;                          conf
+;                          ;; gotta get rid of ports here
+;                          {STORM-LOCAL-DIR tmp-dir
+;                           SUPERVISOR-SLOTS-PORTS port-ids})
+;        id-fn (if id (fn [] id) supervisor/generate-supervisor-id)
+;        daemon (with-var-roots [supervisor/generate-supervisor-id id-fn] (supervisor/mk-supervisor supervisor-conf (:shared-context cluster-map) (supervisor/standalone-supervisor)))]
+;    (swap! (:supervisors cluster-map) conj daemon)
+;    (swap! (:tmp-dirs cluster-map) conj tmp-dir)
+;    daemon))
+
+
+(defn kill-local-storm-cluster [cluster-map]
+  )
+;  (.shutdown (:nimbus cluster-map))
+;  (.close (:state cluster-map))
+;  (.disconnect (:storm-cluster-state cluster-map))
+;  (doseq [s @(:supervisors cluster-map)]
+;    (.shutdown-all-workers s)
+;    ;; race condition here? will it launch the workers again?
+;    (supervisor/kill-supervisor s))
+;  (psim/kill-all-processes)
+;  (log-message "Shutting down in process zookeeper")
+;  (zk/shutdown-inprocess-zookeeper (:zookeeper cluster-map))
+;  (log-message "Done shutting down in process zookeeper")
+;  (doseq [t @(:tmp-dirs cluster-map)]
+;    (log-message "Deleting temporary path " t)
+;    (try
+;      (rmr t)
+;      ;; on windows, the host process still holds lock on the logfile
+;      (catch Exception e (log-message (.getMessage e)))) ))
+
+
+(defn submit-local-topology
+  [nimbus storm-name conf topology]
+  (when-not (Utils/isValidConf conf)
+    (throw (IllegalArgumentException. "Topology conf is not json-serializable")))
+  (.submitTopology nimbus storm-name conf topology))
+
+
+(defn submit-local-topology-with-opts
+  [nimbus storm-name conf topology submit-opts]
+  (when-not (Utils/isValidConf conf)
+    (throw (IllegalArgumentException. "Topology conf is not json-serializable")))
+  (.submitTopologyWithOpts nimbus storm-name conf topology submit-opts))
+
+
 (defnk mk-local-storm-cluster
   "Reads the daemon config, creates a nimbus thread."
-  [:daemon-conf {} :inimbus nil]
+  [:daemon-conf {} :inimbus nil :supervisors 2]
   (let [daemon-conf (merge (read-storm-config)
                            {TOPOLOGY-ENABLE-MESSAGE-TIMEOUTS false
                             TOPOLOGY-TRIDENT-BATCH-EMIT-INTERVAL-MILLIS 50}
@@ -167,9 +228,21 @@
         nimbus (nimbus/service-handler
                  daemon-conf
                  (if inimbus inimbus (nimbus/standalone-nimbus)))
-        storm-map {:nimbus nimbus
+;        nimbus-tmp (local-temp-path)
+;        context (mk-shared-context daemon-conf)
+;        port-counter (mk-counter supervisor-slot-port-min)
+        cluster-map {:nimbus nimbus
                    :daemon-conf daemon-conf}]
-    storm-map))
+                   ;; gotta get rid of port counter here
+;                   :port-counter port-counter
+                   ;; should get rid of tmp dirs as well
+;                   :tmp-dirs (atom [nimbus-tmp])
+;                   :supervisors (atom [])
+                   ;; shared context may be unneccessary as well
+;                   :shared-context nil}]
+;    (dotimes [n supervisors]
+;      (add-supervisor cluster-map))
+    cluster-map))
 
 
 (defn kill-local-storm-cluster [cluster-map]

@@ -1,6 +1,6 @@
 package backtype.storm.generated;
 
-public class SubmitOptions {
+public class SubmitOptions implements java.io.Serializable {
   private final TopologyInitialStatus initialStatus;
 
   public TopologyInitialStatus getInitialStatus() {

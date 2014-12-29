@@ -1,12 +1,11 @@
 package backtype.storm.generated;
 
-import backtype.storm.Config;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class StormTopology {
+public class StormTopology implements java.io.Serializable {
 
   private final Map<String, SpoutSpec> spouts;
   private final Map<String, Bolt> bolts;

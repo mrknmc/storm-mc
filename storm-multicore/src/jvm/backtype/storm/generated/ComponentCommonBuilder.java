@@ -5,7 +5,7 @@ import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ComponentCommonBuilder {
+public class ComponentCommonBuilder implements java.io.Serializable {
   private Map<GlobalStreamId, Grouping> inputs = new HashMap<GlobalStreamId, Grouping>();
   private Map<String, StreamInfo> streams = new HashMap<String, StreamInfo>();
   private Number parallelismHint;

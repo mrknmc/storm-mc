@@ -26,7 +26,7 @@ import backtype.storm.grouping.CustomStreamGrouping;
 
 import java.util.*;
 
-public class Grouping {
+public class Grouping implements java.io.Serializable {
 
   private final List<String> fields; //empty list means global grouping
   private final CustomStreamGrouping customGrouping;
