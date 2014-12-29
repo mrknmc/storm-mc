@@ -41,18 +41,18 @@
             <groupId>compojure</groupId>
             <artifactId>compojure</artifactId>
         </dependency>
-        <dependency>
-            <groupId>hiccup</groupId>
-            <artifactId>hiccup</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>ring</groupId>
-            <artifactId>ring-devel</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>ring</groupId>
-            <artifactId>ring-jetty-adapter</artifactId>
-        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>hiccup</groupId>-->
+            <!--<artifactId>hiccup</artifactId>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>ring</groupId>-->
+            <!--<artifactId>ring-devel</artifactId>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>ring</groupId>-->
+            <!--<artifactId>ring-jetty-adapter</artifactId>-->
+        <!--</dependency>-->
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>tools.logging</artifactId>
@@ -89,38 +89,38 @@
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.apache.thrift</groupId>
-            <artifactId>libthrift</artifactId>
-            <version>0.7.0</version>
-            <scope>compile</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>javax.servlet</groupId>
-                    <artifactId>servlet-api</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>org.apache.thrift</groupId>-->
+            <!--<artifactId>libthrift</artifactId>-->
+            <!--<version>0.7.0</version>-->
+            <!--<scope>compile</scope>-->
+            <!--<exclusions>-->
+                <!--<exclusion>-->
+                    <!--<groupId>org.slf4j</groupId>-->
+                    <!--<artifactId>slf4j-api</artifactId>-->
+                <!--</exclusion>-->
+                <!--<exclusion>-->
+                    <!--<groupId>javax.servlet</groupId>-->
+                    <!--<artifactId>servlet-api</artifactId>-->
+                <!--</exclusion>-->
+            <!--</exclusions>-->
+        <!--</dependency>-->
 
 
-        <dependency>
-            <groupId>org.apache.curator</groupId>
-            <artifactId>curator-framework</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>log4j</groupId>
-                    <artifactId>log4j</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>org.apache.curator</groupId>-->
+            <!--<artifactId>curator-framework</artifactId>-->
+            <!--<exclusions>-->
+                <!--<exclusion>-->
+                    <!--<groupId>log4j</groupId>-->
+                    <!--<artifactId>log4j</artifactId>-->
+                <!--</exclusion>-->
+                <!--<exclusion>-->
+                    <!--<groupId>org.slf4j</groupId>-->
+                    <!--<artifactId>slf4j-log4j12</artifactId>-->
+                <!--</exclusion>-->
+            <!--</exclusions>-->
+        <!--</dependency>-->
         <dependency>
             <groupId>com.googlecode.json-simple</groupId>
             <artifactId>json-simple</artifactId>
@@ -135,19 +135,19 @@
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>org.apache.httpcomponents</groupId>-->
+            <!--<artifactId>httpclient</artifactId>-->
+        <!--</dependency>-->
 
         <dependency>
             <groupId>com.googlecode.disruptor</groupId>
             <artifactId>disruptor</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.jgrapht</groupId>
-            <artifactId>jgrapht-core</artifactId>
-        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>org.jgrapht</groupId>-->
+            <!--<artifactId>jgrapht-core</artifactId>-->
+        <!--</dependency>-->
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
@@ -160,10 +160,10 @@
             <groupId>org.slf4j</groupId>
             <artifactId>log4j-over-slf4j</artifactId>
         </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty</artifactId>
-        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>io.netty</groupId>-->
+            <!--<artifactId>netty</artifactId>-->
+        <!--</dependency>-->
 
         <dependency>
             <groupId>org.mockito</groupId>
@@ -249,15 +249,15 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-report-plugin</artifactId>
-                <configuration>
-                    <reportsDirectories>
-                        <file>${project.build.directory}/test-reports</file>
-                    </reportsDirectories>
-                </configuration>
-            </plugin>
+            <!--<plugin>-->
+                <!--<groupId>org.apache.maven.plugins</groupId>-->
+                <!--<artifactId>maven-surefire-report-plugin</artifactId>-->
+                <!--<configuration>-->
+                    <!--<reportsDirectories>-->
+                        <!--<file>${project.build.directory}/test-reports</file>-->
+                    <!--</reportsDirectories>-->
+                <!--</configuration>-->
+            <!--</plugin>-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
