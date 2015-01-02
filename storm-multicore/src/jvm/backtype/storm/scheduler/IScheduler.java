@@ -39,5 +39,5 @@ public interface IScheduler {
 //    void schedule(Topologies topologies, Cluster cluster);
 
 
-    void schedule(Topologies topology);
+    void schedule(TopologyDetails topology, Cluster cluster);
 }

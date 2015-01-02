@@ -38,5 +38,5 @@ public interface INimbus {
     // map from node id to supervisor details
     //String getHostName(Map<String, SupervisorDetails> existingSupervisors, String nodeId);
     
-//    IScheduler getForcedScheduler();
+    IScheduler getForcedScheduler();
 }

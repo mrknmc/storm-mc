@@ -14,16 +14,11 @@
 ;; See the License for the specific language governing permissions and
 ;; limitations under the License.
 (ns backtype.storm.daemon.nimbus
-;  (:import [org.apache.thrift.server THsHaServer THsHaServer$Args])
-;  (:import [org.apache.thrift.protocol TBinaryProtocol TBinaryProtocol$Factory])
-;  (:import [org.apache.thrift.exception])
-;  (:import [org.apache.thrift.transport TNonblockingServerTransport TNonblockingServerSocket])
   (:import [org.apache.commons.io FileUtils])
   (:import [java.nio ByteBuffer])
   (:import [java.util Map])
   (:import [java.io File FileNotFoundException])
   (:import [java.nio.channels Channels WritableByteChannel])
-;  (:use [backtype.storm.scheduler.DefaultScheduler])
   (:require [backtype.storm.cluster :as cluster])
   (:import [backtype.storm.daemon Shutdownable])
   (:import [backtype.storm.generated StormTopology
@@ -39,39 +34,11 @@
   (:use [backtype.storm.scheduler.DefaultScheduler])
   (:import [backtype.storm.scheduler INimbus SupervisorDetails WorkerSlot Topologies TopologyDetails ExecutorDetails
             Cluster SchedulerAssignment SchedulerAssignmentImpl DefaultScheduler])
-;  (:import [backtype.storm.scheduler INimbus SupervisorDetails WorkerSlot TopologyDetails
-;            Cluster Topologies SchedulerAssignment SchedulerAssignmentImpl DefaultScheduler ExecutorDetails])
   (:use [backtype.storm util timer log config])
-;  (:use [backtype.storm bootstrap util timer config])
-;  (:use [backtype.storm.config :only [validate-configs-with-schemas]])
   (:use [backtype.storm.daemon common])
   (:gen-class
    :methods [^{:static true} [launch [backtype.storm.scheduler.INimbus] void]]))
-;
-;
-;;; active -> reassign in X secs
-;
-;;; killed -> wait kill time then shutdown
-;;; active -> reassign in X secs
-;;; inactive -> nothing
-;;; rebalance -> wait X seconds then rebalance
-;;; swap... (need to handle kill during swap, etc.)
-;;; event transitions are delayed by timer... anything else that comes through (e.g. a kill) override the transition? or just disable other transitions during the transition?
-;
-;
-;;; swapping design
-;;; -- need 2 ports per worker (swap port and regular port)
-;;; -- topology that swaps in can use all the existing topologies swap ports, + unused worker slots
-;;; -- how to define worker resources? port range + number of workers?
-;
-;
-;;; Monitoring (or by checking when nodes go down or heartbeats aren't received):
-;;; 1. read assignment
-;;; 2. see which executors/nodes are up
-;;; 3. make new assignment to fix any problems
-;;; 4. if a storm exists but is not taken down fully, ensure that storm takedown is launched (step by step remove executors and finally remove assignments)
-;
-;
+
 
 (defn compute-available-cpus
   "All CPU slots available for scheduling."
@@ -80,100 +47,11 @@
   (.availableProcessors (Runtime/getRuntime)))
 
 
-
-;(defn- compute-topology->scheduler-assignment
-;  "Convert assignment information in zk to SchedulerAssignment, so it can be used by scheduler api."
-;  [nimbus existing-assignments topology->alive-executors]
-;  (into {} (for [[tid assignment] existing-assignments
-;                 ;; for each existing assignment, get the alive executors
-;                 :let [alive-executors (topology->alive-executors tid)
-;                       ;; get a mapping from an executor to a node+port
-;                       executor->node+port (:executor->node+port assignment)
-;                       ;; and a mapping from ExecutorDetails to WorkerSlots
-;                       executor->slot (into {} (for [[executor [node port]] executor->node+port]
-;                                                 ;; filter out the dead executors
-;                                                 (if (contains? alive-executors executor)
-;                                                   {(ExecutorDetails. (first executor)
-;                                                      (second executor))
-;                                                    (WorkerSlot. node port)}
-;                                                   {})))]]
-;             {tid (SchedulerAssignmentImpl. tid executor->slot)})))
-
-
-;
-;
-;;; NEW NOTES
-;;; only assign to supervisors who are there and haven't timed out
-;;; need to reassign workers with executors that have timed out (will this make it brittle?)
-;;; need to read in the topology and storm-conf from disk
-;;; if no slots available and no slots used by this storm, just skip and do nothing
-;;; otherwise, package rest of executors into available slots (up to how much it needs)
-;
-;;; in the future could allocate executors intelligently (so that "close" tasks reside on same machine)
-;
-;;; TODO: slots that have dead executor should be reused as long as supervisor is active
-;
-;
-;
-;(defn num-used-workers [^SchedulerAssignment scheduler-assignment]
-;  (if scheduler-assignment
-;    (count (.getSlots scheduler-assignment))
-;    0 ))
-;
-;
-;(defn changed-executors [executor->node+port new-executor->node+port]
-;  (let [slot-assigned (reverse-map executor->node+port)
-;        new-slot-assigned (reverse-map new-executor->node+port)
-;        brand-new-slots (map-diff slot-assigned new-slot-assigned)]
-;    (apply concat (vals brand-new-slots))
-;    ))
-;
-;(defn newly-added-slots [existing-assignment new-assignment]
-;  (let [old-slots (-> (:executor->node+port existing-assignment)
-;                    vals
-;                    set)
-;        new-slots (-> (:executor->node+port new-assignment)
-;                    vals
-;                    set)]
-;    (set/difference new-slots old-slots)))
-;
-;
-;(defn basic-supervisor-details-map [storm-cluster-state]
-;  (let [infos (all-supervisor-info storm-cluster-state)]
-;    (->> infos
-;      (map (fn [[id info]]
-;             [id (SupervisorDetails. id (:hostname info) (:scheduler-meta info) nil)]))
-;      (into {}))))
-;
-;(defn- to-worker-slot [[node port]]
-;  (WorkerSlot. node port))
-;
-
-;; Master:
-;; job submit:
-;; 1. read which nodes are available
-;; 2. set assignments
-;; 3. start storm - necessary in case master goes down, when goes back up can remember to take down the storm (2 states: on or off)
-;
-;
-;
-;(defn extract-status-str [base]
-;  (let [t (-> base :status :type)]
-;    (.toUpperCase (name t))
-;    ))
-;
-;
-;; Not sure what significance errors have, this can probably go
-;(defn- get-errors [storm-cluster-state storm-id component-id]
-;  (->> (.errors storm-cluster-state storm-id component-id)
-;    (map #(ErrorInfo. (:error %) (:time-secs %)))))
-
-
 ;; declared here because of cyclic dependency
 (declare compute-executor->component)
 
 
-(defn- compute-topology->executor->node+port
+(defn- compute-executor->node+port
   "convert {topology-id -> SchedulerAssignment} to
            {topology-id -> {executor [node port]}}"
   [scheduler-assignment]
@@ -203,13 +81,8 @@
   "Creates executor ids."
   [nimbus topology storm-conf]
   (let [conf (:conf nimbus)
-;        storm-base (.storm-base (:storm-cluster-state nimbus) storm-id nil)
         component->executors (->> (all-components topology) (map-val num-start-executors))
-;        component->executors (:component->executors storm-base)
-;        storm-conf (read-storm-conf conf storm-id)
-;        topology (read-storm-topology conf storm-id)
         task->component (storm-task-info topology storm-conf)]
-    ;; TODO: this thing below is just repeated right?
     (->>
       ;; task-id -> component-id map
       task->component
@@ -250,7 +123,6 @@
     storm-id
     storm-conf
     topology
-    TODO: here nullpointer
     (storm-conf TOPOLOGY-WORKERS)
     executor->component))
 
@@ -258,7 +130,6 @@
 ;;; public so it can be mocked out
 (defn compute-new-executor->node+port
   [nimbus topology storm-id storm-conf]
-;  [nimbus existing-assignments topologies scratch-topology-id]
   (let [;; map of executor -> component it's going to use
         executor->component (->> (compute-executor->component nimbus topology storm-conf)
                               (map-key (fn [[start-task end-task]]
@@ -273,7 +144,7 @@
 
         new-scheduler-assignment (.getAssignment cluster)
 ;        ;; add more information to convert SchedulerAssignment to Assignment
-        new-topology->executor->node+port (compute-topology->executor->node+port new-scheduler-assignment)]
+        new-topology->executor->node+port (compute-executor->node+port new-scheduler-assignment)]
     new-topology->executor->node+port))
 
 
@@ -282,9 +153,8 @@
   (let [storm-cluster-state (:storm-cluster-state nimbus)
         ;; make the new assignments for topologies
         executor->node+port (compute-new-executor->node+port nimbus topology storm-id storm-conf)
-        now-secs (current-time-secs)
         ;; construct the final Assignments by adding start-times etc into it
-        start-times (map-val executor->node+port now-secs)
+        start-times (map-val (fn [& x] (current-time-secs)) executor->node+port )
         assignment (Assignment. executor->node+port start-times)]
 
     ;; tasks figure out what tasks to talk to by looking at topology at runtime
@@ -294,208 +164,24 @@
     assignment))
 
 
-; commented out until I port Cluster, Topologies etc.
-;(defn mk-scheduler
-;  "Make a scheduler for a Nimbus obj and prepare it."
-;  [conf inimbus]
-;  (let [forced-scheduler (.getForcedScheduler inimbus)
-;        scheduler (cond
-;                    forced-scheduler
-;                    (do (log-message "Using forced scheduler from INimbus " (class forced-scheduler))
-;                      forced-scheduler)
-;
-;                    (conf STORM-SCHEDULER)
-;                    (do (log-message "Using custom scheduler: " (conf STORM-SCHEDULER))
-;                      (-> (conf STORM-SCHEDULER) new-instance))
-;
-;                    :else (do (log-message "Using default scheduler")
-;                            (DefaultScheduler.)))]
-;    (.prepare scheduler conf)
-;    scheduler
-;    ))
+(defn mk-scheduler
+  "Make a scheduler for a Nimbus obj and prepare it."
+  [conf inimbus]
+  (let [forced-scheduler (.getForcedScheduler inimbus)
+        scheduler (cond
+                    forced-scheduler
+                    (do (log-message "Using forced scheduler from INimbus " (class forced-scheduler))
+                      forced-scheduler)
 
+                    (conf STORM-SCHEDULER)
+                    (do (log-message "Using custom scheduler: " (conf STORM-SCHEDULER))
+                      (-> (conf STORM-SCHEDULER) new-instance))
 
-;; declared here because cyclic dependency
-(declare delay-event)
-
-
-(defn do-rebalance
-  "Re-makes assignments."
-  [nimbus storm-id status]
-  (.update-storm! (:storm-cluster-state nimbus)
-    storm-id
-    (assoc-non-nil
-      {:component->executors (:executor-overrides status)}
-      :num-workers (:num-workers status))))
-;; commented out for now
-;  (mk-assignments nimbus :scratch-topology-id storm-id))
-
-
-(defn rebalance-transition
-  "Produces a rebalance transition function."
-  [nimbus storm-id status]
-  )
-;  (fn [time num-workers executor-overrides]
-;    (let [delay (if time
-;                  time
-;                  (get (read-storm-conf (:conf nimbus) storm-id)
-;                    TOPOLOGY-MESSAGE-TIMEOUT-SECS))]
-;      (delay-event nimbus
-;        storm-id
-;        delay
-;        :do-rebalance)
-;      {:type :rebalancing
-;       :delay-secs delay
-;       :old-status status
-;       :num-workers num-workers
-;       :executor-overrides executor-overrides
-;       })))
-
-
-(defn kill-transition
-  "Produces a kill transition function."
-  [nimbus storm-id]
-  )
-;  (fn [kill-time]
-;    (let [delay (if kill-time
-;                  kill-time
-;                  ;; do we need to read the file from disk here?
-;                  (get (read-storm-conf (:conf nimbus) storm-id)
-;                    TOPOLOGY-MESSAGE-TIMEOUT-SECS))]
-;      (delay-event nimbus
-;        storm-id
-;        delay
-;        :remove)
-;      {:type :killed
-;       :kill-time-secs delay})
-;    ))
-
-
-(defn topology-status
-  "Get status of a topology."
-  [nimbus storm-id]
-  (-> nimbus :storm-cluster-state (.storm-base storm-id nil) :status))
-
-
-(defn set-topology-status!
-  "Set the status of a topology."
-  [nimbus storm-id status]
-  (let [storm-cluster-state (:storm-cluster-state nimbus)]
-    (.update-storm! storm-cluster-state
-      storm-id
-      {:status status})
-    (log-message "Updated " storm-id " with status " status)
+                    :else (do (log-message "Using default scheduler")
+                            (DefaultScheduler.)))]
+    (.prepare scheduler conf)
+    scheduler
     ))
-
-
-(defn state-transitions
-  "Map of states to a map of events to states."
-  [nimbus storm-id status]
-  {:active {:inactivate :inactive
-            :activate nil
-            :rebalance (rebalance-transition nimbus storm-id status)
-            :kill (kill-transition nimbus storm-id)
-            }
-   :inactive {:activate :active
-              :inactivate nil
-              :rebalance (rebalance-transition nimbus storm-id status)
-              :kill (kill-transition nimbus storm-id)
-              }
-   :killed {:startup (fn [] (delay-event nimbus
-                              storm-id
-                              (:kill-time-secs status)
-                              :remove)
-                       nil)
-            :kill (kill-transition nimbus storm-id)
-            :remove (fn []
-                      (log-message "Killing topology: " storm-id)
-                      (.remove-storm! (:storm-cluster-state nimbus)
-                        storm-id)
-                      nil)
-            }
-   :rebalancing {:startup (fn [] (delay-event nimbus
-                                   storm-id
-                                   (:delay-secs status)
-                                   :do-rebalance)
-                            nil)
-                 :kill (kill-transition nimbus storm-id)
-                 :do-rebalance (fn []
-                                 (do-rebalance nimbus storm-id status)
-                                 (:old-status status))
-                 }})
-
-
-(defn transition!
-  "Transition Storm with storm-id to a state."
-  ([nimbus storm-id event]
-   (transition! nimbus storm-id event false))
-  ([nimbus storm-id event error-on-no-transition?]
-   ;; lock the submit-lock so only one submission at a time
-   (locking (:submit-lock nimbus)
-     (let [system-events #{:startup}
-           ;; event can be a keyword (:startup) or a list/vector
-           [event & event-args] (if (keyword? event) [event] event)
-           status (topology-status nimbus storm-id)]
-       (if-not status
-         ;; handles the case where event was scheduled but topology has been removed
-         (log-message "Cannot apply event " event " to " storm-id " because topology no longer exists")
-         ;; m and e stand for map and event here
-         (let [get-event (fn [m e]
-                           (if (contains? m e)
-                             ;; if the event is reachable return it
-                             (m e)
-                             ;; if not, log or not depending on conf
-                             (let [msg (str "No transition for event: " event
-                                         ", status: " status,
-                                         " storm-id: " storm-id)]
-                               (if error-on-no-transition?
-                                 (throw-runtime msg)
-                                 (do (when-not (contains? system-events event)
-                                       (log-message msg))
-                                   nil))
-                               )))
-               transition (->
-                            ;; get all possible transitions
-                            (state-transitions nimbus storm-id status)
-                            ;; get transitions reachable from current state
-                            (get (:type status))
-                            ;; get form corresponding to current event
-                            (get-event event))
-               transition (if (or (nil? transition)
-                                (keyword? transition))
-                            ;; if it's nil or a keyword make a fn that returns it
-                            (fn [] transition)
-                            ;; otherwise use it
-                            transition)
-               ;; new status is whatever we get when we apply the transition function
-               new-status (apply transition event-args)
-               ;; if the new status is a keyword, we wrap it in a map
-               new-status (if (keyword? new-status)
-                            {:type new-status}
-                            new-status)]
-           ;; if the new status it not nil, we update the topology
-           (when new-status
-             (set-topology-status! nimbus storm-id new-status)))))
-     )))
-
-
-(defn delay-event
-  "Delays an event (transition) for some number of seconds."
-  [nimbus storm-id delay-secs event]
-  (log-message "Delaying event " event " for " delay-secs " secs for " storm-id)
-  (schedule (:timer nimbus)
-    delay-secs
-    #(transition! nimbus storm-id event false)
-    ))
-
-
-(defn transition-name!
-  "Transition a topology with a given name."
-  [nimbus storm-name event & args]
-  (let [storm-id (get-storm-id (:storm-cluster-state nimbus) storm-name)]
-    (when-not storm-id
-      (throw (NotAliveException. storm-name)))
-    (apply transition! nimbus storm-id event args)))
 
 
 ;; TODO: this can be probably removed.
@@ -625,8 +311,7 @@
                                (log-error t "Error when processing event")
                                (halt-process! 20 "Error when processing an event")
                                ))
-   :scheduler nil})
-;   :scheduler (mk-scheduler conf inimbus)})
+   :scheduler (mk-scheduler conf inimbus)})
 
 
 (defserverfn service-handler
@@ -637,16 +322,6 @@
   (let [nimbus (nimbus-data conf inimbus)]
     ; prepare the validator
     (.prepare ^backtype.storm.nimbus.ITopologyValidator (:validator nimbus) conf)
-    ; schedule a recurring function to do reassignments
-;    (schedule-recurring (:timer nimbus)
-;      0
-;      (conf NIMBUS-MONITOR-FREQ-SECS)
-;      (fn []
-;        (when (conf NIMBUS-REASSIGN)
-;          (locking (:submit-lock nimbus)
-;            (mk-assignments nimbus)))
-;        (do-cleanup nimbus)
-;        ))
     (reify Nimbus$Iface
       (^void submitTopologyWithOpts
        [this ^String storm-name ^Map topo-conf ^StormTopology topology
@@ -689,9 +364,9 @@
                ;; this is a map from Thrift status names to keyword statuses
                (let [thrift-status->kw-status {SubmitOptions$TopologyInitialStatus/INACTIVE :inactive
                                                SubmitOptions$TopologyInitialStatus/ACTIVE :active}]
-                 (start-storm nimbus topology storm-conf storm-name storm-id (thrift-status->kw-status (.getInitialStatus submitOptions))))
+                 (start-storm nimbus topology total-storm-conf storm-name storm-id (thrift-status->kw-status (.getInitialStatus submitOptions))))
                )
-               (mk-assignments nimbus topology storm-id storm-conf))
+               (mk-assignments nimbus topology storm-id total-storm-conf))
            (catch Throwable e
                             (log-warn-error e "Topology submission exception. (topology name='" storm-name "')")
                             (throw e)))))
@@ -707,128 +382,16 @@
       (^void killTopologyWithOpts [this ^String storm-name ^KillOptions options]
         (check-storm-active! nimbus storm-name true)
         (let [wait-amt (.getWaitSecs options)]
-          (transition-name! nimbus storm-name [:kill wait-amt] true)
+;          (transition-name! nimbus storm-name [:kill wait-amt] true)
           ))
-
-;      (^void rebalance [this ^String storm-name ^RebalanceOptions options]
-;       (check-storm-active! nimbus storm-name true)
-;       (let [wait-amt (if (.is_set_wait_secs options)
-;                        (.get_wait_secs options))
-;             num-workers (if (.is_set_num_workers options)
-;                           (.get_num_workers options))
-;             executor-overrides (if (.is_set_num_executors options)
-;                                  (.get_num_executors options)
-;                                  {})]
-;         (doseq [[c num-executors] executor-overrides]
-;           (when (<= num-executors 0)
-;             (throw (InvalidTopologyException. "Number of executors must be greater than 0"))
-;             ))
-;         (transition-name! nimbus storm-name [:rebalance wait-amt num-workers executor-overrides] true)
-;         ))
-
-      (activate [this storm-name]
-        )
-;        (transition-name! nimbus storm-name :activate true))
-
-      (deactivate [this storm-name]
-        )
-;        (transition-name! nimbus storm-name :inactivate true))
 
       (getNimbusConf [this]
         (:conf nimbus))
-
-      (^Map getTopologyConf [this ^String id]
-        )
-;       (to-json (try-read-storm-conf conf id)))
-
-      (^StormTopology getTopology [this ^String id]
-        )
-;       (system-topology! (try-read-storm-conf conf id) (try-read-storm-topology conf id)))
-
-      (^StormTopology getUserTopology [this ^String id]
-        )
-;       (try-read-storm-topology conf id))
-
-;      (^ClusterSummary getClusterInfo [this]
-;       (let [storm-cluster-state (:storm-cluster-state nimbus)
-;             supervisor-infos (all-supervisor-info storm-cluster-state)
-;             ;; TODO: need to get the port info about supervisors...
-;             ;; in standalone just look at metadata, otherwise just say N/A?
-;             supervisor-summaries (dofor [[id info] supervisor-infos]
-;                                    (let [ports (set (:meta info)) ;;TODO: this is only true for standalone
-;                                          ]
-;                                      (SupervisorSummary. (:hostname info)
-;                                        (:uptime-secs info)
-;                                        (count ports)
-;                                        (count (:used-ports info))
-;                                        id)
-;                                      ))
-;             nimbus-uptime ((:uptime nimbus))
-;             bases (topology-bases storm-cluster-state)
-;             topology-summaries (dofor [[id base] bases]
-;                                  (let [assignment (.assignment-info storm-cluster-state id nil)]
-;                                    (TopologySummary. id
-;                                      (:storm-name base)
-;                                      (->> (:executor->node+port assignment)
-;                                        keys
-;                                        (mapcat executor-id->tasks)
-;                                        count)
-;                                      (->> (:executor->node+port assignment)
-;                                        keys
-;                                        count)
-;                                      (->> (:executor->node+port assignment)
-;                                        vals
-;                                        set
-;                                        count)
-;                                      (time-delta (:launch-time-secs base))
-;                                      (extract-status-str base))
-;                                    ))]
-;         (ClusterSummary. supervisor-summaries
-;           nimbus-uptime
-;           topology-summaries)
-;         ))
-
-;      (^TopologyInfo getTopologyInfo [this ^String storm-id]
-;       (let [storm-cluster-state (:storm-cluster-state nimbus)
-;             task->component (storm-task-info (try-read-storm-topology conf storm-id) (try-read-storm-conf conf storm-id))
-;             base (.storm-base storm-cluster-state storm-id nil)
-;             assignment (.assignment-info storm-cluster-state storm-id nil)
-;             beats (.executor-beats storm-cluster-state storm-id (:executor->node+port assignment))
-;             all-components (-> task->component reverse-map keys)
-;             errors (->> all-components
-;                      (map (fn [c] [c (get-errors storm-cluster-state storm-id c)]))
-;                      (into {}))
-;             executor-summaries (dofor [[executor [node port]] (:executor->node+port assignment)]
-;                                  (let [host (-> assignment :node->host (get node))
-;                                        heartbeat (get beats executor)
-;                                        stats (:stats heartbeat)
-;                                        stats (if stats
-;                                                (stats/thriftify-executor-stats stats))]
-;                                    (doto
-;                                      (ExecutorSummary. (thriftify-executor-id executor)
-;                                        (-> executor first task->component)
-;                                        host
-;                                        port
-;                                        (nil-to-zero (:uptime heartbeat)))
-;                                      (.set_stats stats))
-;                                    ))
-;             ]
-;         (TopologyInfo. storm-id
-;           (:storm-name base)
-;           (time-delta (:launch-time-secs base))
-;           executor-summaries
-;           (extract-status-str base)
-;           errors
-;           )
-;         ))
 
       Shutdownable
       (shutdown [this]
         (log-message "Shutting down master")
         (cancel-timer (:timer nimbus))
-;        (.disconnect (:storm-cluster-state nimbus))
-;        (.cleanup (:downloaders nimbus))
-;        (.cleanup (:uploaders nimbus))
         (log-message "Shut down master")
         )
       DaemonCommon
@@ -841,5 +404,6 @@
     (prepare [this conf]
       )
     (assignSlots [this topology slots]
+      )
+    (getForcedScheduler [this]
       )))
-

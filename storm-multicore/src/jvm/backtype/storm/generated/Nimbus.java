@@ -43,9 +43,9 @@ public class Nimbus implements java.io.Serializable {
 
     public void killTopologyWithOpts(String name, KillOptions options) throws NotAliveException;
 
-    public void activate(String name) throws NotAliveException;
+//    public void activate(String name) throws NotAliveException;
 
-    public void deactivate(String name) throws NotAliveException;
+//    public void deactivate(String name) throws NotAliveException;
 
     public Map getNimbusConf();
 
@@ -53,11 +53,11 @@ public class Nimbus implements java.io.Serializable {
 
 //    public TopologyInfo getTopologyInfo(String id) throws NotAliveException;
 
-    public Map getTopologyConf(String id) throws NotAliveException;
+//    public Map getTopologyConf(String id) throws NotAliveException;
 
-    public StormTopology getTopology(String id) throws NotAliveException;
+//    public StormTopology getTopology(String id) throws NotAliveException;
 
-    public StormTopology getUserTopology(String id) throws NotAliveException;
+//    public StormTopology getUserTopology(String id) throws NotAliveException;
 
   }
 }
