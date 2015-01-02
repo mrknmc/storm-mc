@@ -285,8 +285,9 @@
 
 (def DISALLOWED-TOPOLOGY-NAME-STRS #{"/" "." ":" "\\"})
 
-(defn validate-topology-name! [name]
+(defn validate-topology-name!
   "Check that the name of the topology is valid."
+  [name]
   (if (some #(.contains name %) DISALLOWED-TOPOLOGY-NAME-STRS)
     (throw (InvalidTopologyException.
              (str "Topology name cannot contain any of the following: " (pr-str DISALLOWED-TOPOLOGY-NAME-STRS))))
