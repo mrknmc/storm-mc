@@ -17,26 +17,42 @@
  */
 package backtype.storm.scheduler;
 
-import backtype.storm.generated.StormTopology;
-
-import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
-public interface INimbus {
-
-    void prepare(Map stormConf);
+public interface SchedulerAssignment {
     /**
-     * Returns all slots that are available for the next round of scheduling. A slot is available for scheduling
-     * if it is free and can be assigned to, or if it is used and can be reassigned.
+     * Does this slot occupied by this assignment?
+     * @param slot
+     * @return
      */
-    //Collection<WorkerSlot> allSlotsAvailableForScheduling(Collection<SupervisorDetails> existingSupervisors, Topologies topologies, Set<String> topologiesMissingAssignments);
+    public boolean isSlotOccupied(WorkerSlot slot);
 
-    // this is called after the assignment is changed in ZK
-    void assignSlots(StormTopology topology, Collection<WorkerSlot> newSlots);
+    /**
+     * is the executor assigned?
+     * 
+     * @param executor
+     * @return
+     */
+    public boolean isExecutorAssigned(ExecutorDetails executor);
     
-    // map from node id to supervisor details
-    //String getHostName(Map<String, SupervisorDetails> existingSupervisors, String nodeId);
+    /**
+     * get the topology-id this assignment is for.
+     * @return
+     */
+    public String getTopologyId();
+
+    /**
+     * get the executor -> slot map.
+     * @return
+     */
+    public Map<ExecutorDetails, WorkerSlot> getExecutorToSlot();
+
+    /**
+     * Return the executors covered by this assignments
+     * @return
+     */
+    public Set<ExecutorDetails> getExecutors();
     
-//    IScheduler getForcedScheduler();
+    public Set<WorkerSlot> getSlots();
 }

@@ -74,6 +74,7 @@
         <reply.version>0.3.0</reply.version>
         <conjure.version>2.1.3</conjure.version>
         <zookeeper.version>3.4.5</zookeeper.version>
+        <affinity.version>2.1.6</affinity.version>
 
     </properties>
 
@@ -230,6 +231,11 @@
                 <groupId>io.netty</groupId>
                 <artifactId>netty</artifactId>
                 <version>${netty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.openhft</groupId>
+                <artifactId>affinity</artifactId>
+                <version>${affinity.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.clojure</groupId>

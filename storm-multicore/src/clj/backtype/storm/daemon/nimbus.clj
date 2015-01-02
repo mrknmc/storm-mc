@@ -34,8 +34,11 @@
   (:import [backtype.storm.utils Utils ThriftTopologyUtils])
   ;; this is required for the StormBase import to work
   (:require [backtype.storm.daemon.common])
-  (:import [backtype.storm.daemon.common StormBase])
-  (:import [backtype.storm.scheduler INimbus SupervisorDetails WorkerSlot Topologies TopologyDetails ExecutorDetails])
+  (:import [backtype.storm.daemon.common StormBase Assignment])
+  ;; this is required for the DefaultScheduler import to work
+  (:use [backtype.storm.scheduler.DefaultScheduler])
+  (:import [backtype.storm.scheduler INimbus SupervisorDetails WorkerSlot Topologies TopologyDetails ExecutorDetails
+            Cluster SchedulerAssignment SchedulerAssignmentImpl DefaultScheduler])
 ;  (:import [backtype.storm.scheduler INimbus SupervisorDetails WorkerSlot TopologyDetails
 ;            Cluster Topologies SchedulerAssignment SchedulerAssignmentImpl DefaultScheduler ExecutorDetails])
   (:use [backtype.storm util timer log config])
@@ -44,22 +47,6 @@
   (:use [backtype.storm.daemon common])
   (:gen-class
    :methods [^{:static true} [launch [backtype.storm.scheduler.INimbus] void]]))
-
-;(bootstrap)
-;
-;(defn file-cache-map [conf]
-;  (TimeCacheMap.
-;    (int (conf NIMBUS-FILE-COPY-EXPIRATION-SECS))
-;    (reify TimeCacheMap$ExpiredCallback
-;      (expire [this id stream]
-;        (.close stream)
-;        ))
-;    ))
-;
-;
-;
-;(declare delay-event)
-;(declare mk-assignments)
 ;
 ;
 ;;; active -> reassign in X secs
@@ -71,9 +58,6 @@
 ;;; swap... (need to handle kill during swap, etc.)
 ;;; event transitions are delayed by timer... anything else that comes through (e.g. a kill) override the transition? or just disable other transitions during the transition?
 ;
-;
-;(defmulti setup-jar cluster-mode)
-;(defmulti clean-inbox cluster-mode)
 ;
 ;;; swapping design
 ;;; -- need 2 ports per worker (swap port and regular port)
@@ -87,74 +71,16 @@
 ;;; 3. make new assignment to fix any problems
 ;;; 4. if a storm exists but is not taken down fully, ensure that storm takedown is launched (step by step remove executors and finally remove assignments)
 ;
-;(defn- assigned-slots
-;  "Returns a map from node-id to a set of ports"
-;  [storm-cluster-state]
-;  (let [assignments (.assignments storm-cluster-state nil)
-;        ]
-;    (defaulted
-;      (apply merge-with set/union
-;                        (for [a assignments
-;                              [_ [node port]] (-> (.assignment-info storm-cluster-state a nil) :executor->node+port)]
-;                          {node #{port}}
-;                          ))
-;      {})
-;    ))
 ;
-;
-;
-;(defn- all-supervisor-info
-;  "Supervisor infos from cluster state."
-;  ([storm-cluster-state] (all-supervisor-info storm-cluster-state nil))
-;  ([storm-cluster-state callback]
-;   (let [supervisor-ids (.supervisors storm-cluster-state callback)]
-;     (into {}
-;       (mapcat
-;         (fn [id]
-;           (if-let [info (.supervisor-info storm-cluster-state id)]
-;             [[id info]]
-;             ))
-;         supervisor-ids))
-;     )))
-;
-;
-;(defn- all-scheduling-slots
-;  "All slots (node-id, port) available for scheduling."
-;  [nimbus topologies missing-assignment-topologies]
-;  (let [storm-cluster-state (:storm-cluster-state nimbus)
-;        ^INimbus inimbus (:inimbus nimbus)
-;
-;        supervisor-infos (all-supervisor-info storm-cluster-state nil)
-;
-;        supervisor-details (dofor [[id info] supervisor-infos]
-;                             (SupervisorDetails. id (:meta info)))
-;
-;        ret (.allSlotsAvailableForScheduling inimbus
-;              supervisor-details
-;              topologies
-;              (set missing-assignment-topologies)
-;              )
-;        ]
-;    (dofor [^WorkerSlot slot ret]
-;      [(.getNodeId slot) (.getPort slot)]
-;      )))
-;
-;
-;(defn- compute-supervisor->dead-ports [nimbus existing-assignments topology->executors topology->alive-executors]
-;  (let [dead-slots (into [] (for [[tid assignment] existing-assignments
-;                                  :let [all-executors (topology->executors tid)
-;                                        alive-executors (topology->alive-executors tid)
-;                                        dead-executors (set/difference all-executors alive-executors)
-;                                        dead-slots (->> (:executor->node+port assignment)
-;                                                     (filter #(contains? dead-executors (first %)))
-;                                                     vals)]]
-;                              dead-slots))
-;        supervisor->dead-ports (->> dead-slots
-;                                 (apply concat)
-;                                 (map (fn [[sid port]] {sid #{port}}))
-;                                 (apply (partial merge-with set/union)))]
-;    (or supervisor->dead-ports {})))
-;
+
+(defn compute-available-cpus
+  "All CPU slots available for scheduling."
+  []
+  ;; for now just return number of cores
+  (.availableProcessors (Runtime/getRuntime)))
+
+
+
 ;(defn- compute-topology->scheduler-assignment
 ;  "Convert assignment information in zk to SchedulerAssignment, so it can be used by scheduler api."
 ;  [nimbus existing-assignments topology->alive-executors]
@@ -172,40 +98,9 @@
 ;                                                    (WorkerSlot. node port)}
 ;                                                   {})))]]
 ;             {tid (SchedulerAssignmentImpl. tid executor->slot)})))
+
+
 ;
-;
-;(defn- read-all-supervisor-details [nimbus all-scheduling-slots supervisor->dead-ports]
-;  "return a map: {topology-id SupervisorDetails}"
-;  (let [storm-cluster-state (:storm-cluster-state nimbus)
-;        supervisor-infos (all-supervisor-info storm-cluster-state)
-;        nonexistent-supervisor-slots (apply dissoc all-scheduling-slots (keys supervisor-infos))
-;        all-supervisor-details (into {} (for [[sid supervisor-info] supervisor-infos
-;                                              :let [hostname (:hostname supervisor-info)
-;                                                    scheduler-meta (:scheduler-meta supervisor-info)
-;                                                    dead-ports (supervisor->dead-ports sid)
-;                                                    ;; hide the dead-ports from the all-ports
-;                                                    ;; these dead-ports can be reused in next round of assignments
-;                                                    all-ports (-> (get all-scheduling-slots sid)
-;                                                                (set/difference dead-ports)
-;                                                                ((fn [ports] (map int ports))))
-;                                                    supervisor-details (SupervisorDetails. sid hostname scheduler-meta all-ports)]]
-;                                          {sid supervisor-details}))]
-;    (merge all-supervisor-details
-;      (into {}
-;        (for [[sid ports] nonexistent-supervisor-slots]
-;          [sid (SupervisorDetails. sid nil ports)]))
-;      )))
-;
-;(defn- compute-topology->executor->node+port [scheduler-assignments]
-;  "convert {topology-id -> SchedulerAssignment} to
-;           {topology-id -> {executor [node port]}}"
-;  (map-val (fn [^SchedulerAssignment assignment]
-;             (->> assignment
-;               .getExecutorToSlot
-;               (#(into {} (for [[^ExecutorDetails executor ^WorkerSlot slot] %]
-;                            {[(.getStartTask executor) (.getEndTask executor)]
-;                             [(.getNodeId slot) (.getPort slot)]})))))
-;    scheduler-assignments))
 ;
 ;;; NEW NOTES
 ;;; only assign to supervisors who are there and haven't timed out
@@ -219,14 +114,6 @@
 ;;; TODO: slots that have dead executor should be reused as long as supervisor is active
 ;
 ;
-;;; (defn- assigned-slots-from-scheduler-assignments [topology->assignment]
-;;;   (->> topology->assignment
-;;;        vals
-;;;        (map (fn [^SchedulerAssignment a] (.getExecutorToSlot a)))
-;;;        (mapcat vals)
-;;;        (map (fn [^WorkerSlot s] {(.getNodeId s) #{(.getPort s)}}))
-;;;        (apply merge-with set/union)
-;;;        ))
 ;
 ;(defn num-used-workers [^SchedulerAssignment scheduler-assignment]
 ;  (if scheduler-assignment
@@ -286,6 +173,16 @@
 (declare compute-executor->component)
 
 
+(defn- compute-topology->executor->node+port
+  "convert {topology-id -> SchedulerAssignment} to
+           {topology-id -> {executor [node port]}}"
+  [scheduler-assignment]
+  (->> scheduler-assignment
+    .getExecutorToSlot
+    (#(into {} (for [[^ExecutorDetails executor ^WorkerSlot slot] %]
+                 {[(.getStartTask executor) (.getEndTask executor)] (.getUUID slot)})))))
+
+
 (defn- to-executor-id
   "Executor id is the first and last task it will run."
   [task-ids]
@@ -307,8 +204,6 @@
   [nimbus topology storm-conf]
   (let [conf (:conf nimbus)
 ;        storm-base (.storm-base (:storm-cluster-state nimbus) storm-id nil)
-        _ (log-message topology)
-        _ (log-message storm-conf)
         component->executors (->> (all-components topology) (map-val num-start-executors))
 ;        component->executors (:component->executors storm-base)
 ;        storm-conf (read-storm-conf conf storm-id)
@@ -348,163 +243,55 @@
     executor->component))
 
 
+(defn mk-topology-details
+  ""
+  [storm-id storm-conf topology executor->component]
+  (TopologyDetails.
+    storm-id
+    storm-conf
+    topology
+    TODO: here nullpointer
+    (storm-conf TOPOLOGY-WORKERS)
+    executor->component))
+
+
 ;;; public so it can be mocked out
-(defn compute-new-topology->executor->node+port
-  [nimbus topology storm-conf]
+(defn compute-new-executor->node+port
+  [nimbus topology storm-id storm-conf]
 ;  [nimbus existing-assignments topologies scratch-topology-id]
-  (let [conf (:conf nimbus)
-        storm-cluster-state (:storm-cluster-state nimbus)
-        ;; in local environment topology->executors == topology->alive-executors
-        executor->components (compute-executor->component nimbus topology storm-conf)]
-        ;; TODO: this should not stop here
-         nil))
-;        topology->alive-executors (compute-topology->alive-executors nimbus
-;                                    existing-assignments
-;                                    topologies
-;                                    topology->executors
-;                                    scratch-topology-id)
-        ;; in local environment there are no dead ports or supervisors
-;        supervisor->dead-ports (compute-supervisor->dead-ports nimbus
-;                                 existing-assignments
-;                                 topology->executors
-;                                 topology->alive-executors)
-
-
-
-        ;; TODO: This should not be commented out, I think
-;        topology->scheduler-assignment (compute-topology->scheduler-assignment nimbus
-;                                         existing-assignments
-;                                         topology->alive-executors)
-
-;        missing-assignment-topologies (->> topologies
-;                                        .getTopologies
-;                                        (map (memfn getId))
-;                                        (filter (fn [t]
-;                                                  (let [alle (get topology->executors t)
-;                                                        alivee (get topology->alive-executors t)]
-;                                                    (or (empty? alle)
-;                                                      (not= alle alivee)
-;                                                      (< (-> topology->scheduler-assignment
-;                                                           (get t)
-;                                                           num-used-workers )
-;                                                        (-> topologies (.getById t) .getNumWorkers)
-;                                                        ))
-;                                                    ))))
-        ;; create a map of available node-id -> #{port1, port2, ...}
-;        all-scheduling-slots (->> (all-scheduling-slots nimbus topologies missing-assignment-topologies)
-;                               (map (fn [[node-id port]] {node-id #{port}}))
-;                               (apply merge-with set/union))
-
-;        supervisors (read-all-supervisor-details nimbus all-scheduling-slots supervisor->dead-ports)
-;        cluster (Cluster. (:inimbus nimbus) supervisors topology->scheduler-assignment)
-
-
-
-        ;; TODO: This should not be commented out, I think
+  (let [;; map of executor -> component it's going to use
+        executor->component (->> (compute-executor->component nimbus topology storm-conf)
+                              (map-key (fn [[start-task end-task]]
+                                         (ExecutorDetails. (int start-task) (int end-task)))))
+        ;; create a slot for each cpu
+        all-scheduling-slots (repeatedly (compute-available-cpus) #(WorkerSlot.))
+        topology-details (mk-topology-details storm-id storm-conf topology executor->component)
+        cluster (Cluster. (:inimbus nimbus) all-scheduling-slots)
 ;        ;; call scheduler.schedule to schedule all the topologies
 ;        ;; the new assignments for all the topologies are in the cluster object.
-;        _ (.schedule (:scheduler nimbus) topologies cluster)
-;        new-scheduler-assignments (.getAssignments cluster)
+        _ (.schedule (:scheduler nimbus) topology-details cluster)
+
+        new-scheduler-assignment (.getAssignment cluster)
 ;        ;; add more information to convert SchedulerAssignment to Assignment
-;        new-topology->executor->node+port (compute-topology->executor->node+port new-scheduler-assignments)]
-;    ;; print some useful information.
-;    (doseq [[topology-id executor->node+port] new-topology->executor->node+port
-;            :let [old-executor->node+port (-> topology-id
-;                                            existing-assignments
-;                                            :executor->node+port)
-;                  reassignment (filter (fn [[executor node+port]]
-;                                         (and (contains? old-executor->node+port executor)
-;                                           (not (= node+port (old-executor->node+port executor)))))
-;                                 executor->node+port)]]
-;      (when-not (empty? reassignment)
-;        (let [new-slots-cnt (count (set (vals executor->node+port)))
-;              reassign-executors (keys reassignment)]
-;          (log-message "Reassigning " topology-id " to " new-slots-cnt " slots")
-;          (log-message "Reassign executors: " (vec reassign-executors)))))
-;
-;    new-topology->executor->node+port))
+        new-topology->executor->node+port (compute-topology->executor->node+port new-scheduler-assignment)]
+    new-topology->executor->node+port))
 
 
-;; get existing assignment (just the executor->node+port map) -> default to {}
-;; filter out ones which have a executor timeout
-;; figure out available slots on cluster. add to that the used valid slots to get total slots. figure out how many executors should be in each slot (e.g., 4, 4, 4, 5)
-;; only keep existing slots that satisfy one of those slots. for rest, reassign them across remaining slots
-;; edge case for slots with no executor timeout but with supervisor timeout... just treat these as valid slots that can be reassigned to. worst comes to worse the executor will timeout and won't assign here next time around
-(defnk mk-assignments
-  [nimbus topology storm-conf :scratch-topology-id nil]
-  (let [conf (:conf nimbus)
-        storm-cluster-state (:storm-cluster-state nimbus)
-        ^INimbus inimbus (:inimbus nimbus)
-        ;; read all the topologies
-;        topology-ids (.active-storms storm-cluster-state)
-;        topologies (into {} (for [tid topology-ids]
-;                              {tid (read-topology-details nimbus tid)}))
-;        topologies (Topologies. topologies)
-        ;; read all the assignments
-;        assigned-topology-ids (.assignments storm-cluster-state nil)
-;        existing-assignments (into {} (for [tid assigned-topology-ids]
-                                        ;; for the topology which wants rebalance (specified by the scratch-topology-id)
-                                        ;; we exclude its assignment, meaning that all the slots occupied by its assignment
-                                        ;; will be treated as free slot in the scheduler code.
-;                                        (when (or (nil? scratch-topology-id) (not= tid scratch-topology-id))
-;                                          {tid (.assignment-info storm-cluster-state tid nil)})))
+(defn mk-assignments
+  [nimbus topology storm-id storm-conf]
+  (let [storm-cluster-state (:storm-cluster-state nimbus)
         ;; make the new assignments for topologies
-        topology->executor->node+port (compute-new-topology->executor->node+port
-                                        nimbus
-                                        topology
-                                        storm-conf)
-;                                        existing-assignments
-;                                        topologies
-;                                        scratch-topology-id)
-        ]))
+        executor->node+port (compute-new-executor->node+port nimbus topology storm-id storm-conf)
+        now-secs (current-time-secs)
+        ;; construct the final Assignments by adding start-times etc into it
+        start-times (map-val executor->node+port now-secs)
+        assignment (Assignment. executor->node+port start-times)]
 
-        ;; TODO: this should not be commented out
-;        now-secs (current-time-secs)
-;
-;        basic-supervisor-details-map (basic-supervisor-details-map storm-cluster-state)
-;
-;        ;; construct the final Assignments by adding start-times etc into it
-;        new-assignments (into {} (for [[topology-id executor->node+port] topology->executor->node+port
-;                                       :let [existing-assignment (get existing-assignments topology-id)
-;                                             all-nodes (->> executor->node+port vals (map first) set)
-;                                             node->host (->> all-nodes
-;                                                          (mapcat (fn [node]
-;                                                                    (if-let [host (.getHostName inimbus basic-supervisor-details-map node)]
-;                                                                      [[node host]]
-;                                                                      )))
-;                                                          (into {}))
-;                                             all-node->host (merge (:node->host existing-assignment) node->host)
-;                                             reassign-executors (changed-executors (:executor->node+port existing-assignment) executor->node+port)
-;                                             start-times (merge (:executor->start-time-secs existing-assignment)
-;                                                           (into {}
-;                                                             (for [id reassign-executors]
-;                                                               [id now-secs]
-;                                                               )))]]
-;                                   {topology-id (Assignment.
-;                                                  (master-stormdist-root conf topology-id)
-;                                                  (select-keys all-node->host all-nodes)
-;                                                  executor->node+port
-;                                                  start-times)}))]
-;
-;    ;; tasks figure out what tasks to talk to by looking at topology at runtime
-;    ;; only log/set when there's been a change to the assignment
-;    (doseq [[topology-id assignment] new-assignments
-;            :let [existing-assignment (get existing-assignments topology-id)
-;                  topology-details (.getById topologies topology-id)]]
-;      (if (= existing-assignment assignment)
-;        (log-debug "Assignment for " topology-id " hasn't changed")
-;        (do
-;          (log-message "Setting new assignment for topology id " topology-id ": " (pr-str assignment))
-;          (.set-assignment! storm-cluster-state topology-id assignment)
-;          )))
-;    (->> new-assignments
-;      (map (fn [[topology-id assignment]]
-;             (let [existing-assignment (get existing-assignments topology-id)]
-;               [topology-id (map to-worker-slot (newly-added-slots existing-assignment assignment))]
-;               )))
-;      (into {})
-;      (.assignSlots inimbus topologies))
-;    ))
+    ;; tasks figure out what tasks to talk to by looking at topology at runtime
+    ;; only log/set when there's been a change to the assignment
+    (log-message "Setting new assignment for topology id " storm-id ": " (pr-str assignment))
+    (.set-assignment! storm-cluster-state storm-id assignment)
+    assignment))
 
 
 ; commented out until I port Cluster, Topologies etc.
@@ -778,26 +565,17 @@
       num-tasks)))
 
 
-;; Commented out until I think of how to do this nicely
-;(defn normalize-topology
-;  "Normalizes a topology."
-;  [storm-conf ^StormTopology topology]
-;  ;; Make sure that StormTopology const below makes copy.
-;  (let [ret (StormTopology. topology)]
-;    (doseq [[_ component] (all-components ret)]
-;      (.setParallelismHint (.getCommon component) (component-parallelism storm-conf component))
-;      (.setConf
-;        (.getCommon component)
-;          ;; this shit updates the conf of a component with {TOPOLOGY-TASKS = max(TOPOLOGY-MAX-TASK-PARALLELISM, num-tasks)
-;          (merge (component-conf component) {TOPOLOGY-TASKS (component-parallelism storm-conf component)})))
-;    ret ))
-;(defn normalize-topology
-;  "Normalizes a topology."
-;  [storm-conf ^StormTopology topology]
-;  (let [[set-parallelism (fn [c] (component-parallelism storm-conf c))]
-;        [newSpouts (map-val set-parallelism (.getSpouts topology))]
-;        [newBolts (map-val set-parallelism (.getBolts topology))]]
-;  (StormTopology. newSpouts newBolts)))
+;; This is mutable for now, until I figure out how to do it immutably.
+(defn normalize-topology!
+  "Normalizes a topology."
+  [storm-conf ^StormTopology topology]
+  ;; Make sure that StormTopology const below makes copy.
+  (doseq [[_ component] (all-components topology)]
+    (.setConf
+      (.getCommon component)
+        ;; this shit updates the conf of a component with {TOPOLOGY-TASKS = max(TOPOLOGY-MAX-TASK-PARALLELISM, num-tasks)
+        (merge (component-conf component) {TOPOLOGY-TASKS (component-parallelism storm-conf component)})))
+  topology)
 
 
 (defn storm-active?
@@ -901,7 +679,7 @@
                               topology)
                  total-storm-conf (merge conf storm-conf)
                  ; commented out until I find a good way to do it
-  ;               topology (normalize-topology total-storm-conf topology)
+                 topology (normalize-topology! total-storm-conf topology)
                  storm-cluster-state (:storm-cluster-state nimbus)]
              (system-topology! total-storm-conf topology) ;; this validates the structure of the topology
              (log-message "Received topology submission for " storm-name " with conf " storm-conf)
@@ -913,7 +691,7 @@
                                                SubmitOptions$TopologyInitialStatus/ACTIVE :active}]
                  (start-storm nimbus topology storm-conf storm-name storm-id (thrift-status->kw-status (.getInitialStatus submitOptions))))
                )
-               (mk-assignments nimbus topology storm-conf))
+               (mk-assignments nimbus topology storm-id storm-conf))
            (catch Throwable e
                             (log-warn-error e "Topology submission exception. (topology name='" storm-name "')")
                             (throw e)))))
@@ -1061,19 +839,7 @@
 (defn standalone-nimbus []
   (reify INimbus
     (prepare [this conf]
+      )
+    (assignSlots [this topology slots]
       )))
-
-
-;(defn launch-server! [conf nimbus]
-;  (let [service-handler (service-handler conf nimbus)]
-;        options (-> (TNonblockingServerSocket. (int (conf NIMBUS-THRIFT-PORT)))
-;                  (THsHaServer$Args.)
-;                  (.workerThreads 64)
-;                  (.protocolFactory (TBinaryProtocol$Factory. false true (conf NIMBUS-THRIFT-MAX-BUFFER-SIZE)))
-;                  (.processor (Nimbus$Processor. service-handler))
-;                  )
-;        server (THsHaServer. (do (set! (. options maxReadBufferBytes)(conf NIMBUS-THRIFT-MAX-BUFFER-SIZE)) options))]
-;    (.addShutdownHook (Runtime/getRuntime) (Thread. (fn [] (.shutdown service-handler) )))
-;    (log-message "Starting Nimbus server...")
-;    (.serve server)))
 

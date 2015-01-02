@@ -27,9 +27,9 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 
 public class ComponentCommon implements java.io.Serializable, Cloneable {
-  private final ImmutableMap<GlobalStreamId, Grouping> inputs;
-  private final ImmutableMap<String, StreamInfo> streams;
-  private final ImmutableMap<String, Object> conf;
+  private final Map<GlobalStreamId, Grouping> inputs;
+  private final Map<String, StreamInfo> streams;
+  private Map<String, Object> conf;
   private final Number parallelismHint;
 
   public ComponentCommon(Map<GlobalStreamId, Grouping> inputs,
@@ -56,6 +56,10 @@ public class ComponentCommon implements java.io.Serializable, Cloneable {
 
   public Map getConf() {
     return conf;
+  }
+
+  public void setConf(Map<String, Object> conf) {
+    this.conf = ImmutableMap.copyOf(conf);
   }
 
 }
