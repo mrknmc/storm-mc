@@ -18,10 +18,11 @@
   (:use [backtype.storm util config log])
   (:require [backtype.storm.cluster :as cluster])
   (:require [backtype.storm.disruptor :as disruptor])
-;  (:require [backtype.storm.daemon [executor :as executor]])
+  (:require [backtype.storm.daemon [executor :as executor]])
   (:import [backtype.storm.daemon Shutdownable])
   (:import [backtype.storm.generated StormTopology])
   (:import [backtype.storm.tuple Fields])
+  (:import [backtype.storm.task WorkerTopologyContext])
   (:import [backtype.storm.utils ThriftTopologyUtils])
   (:import [java.util.concurrent Executors])
   (:import [java.util ArrayList HashMap])
@@ -455,6 +456,21 @@
 ;; stuff below is going to be used.
 
 
+(defn- mk-default-resources [worker]
+  (let [conf (:conf worker)
+        thread-pool-size (int (conf TOPOLOGY-WORKER-SHARED-THREAD-POOL-SIZE))]
+    {WorkerTopologyContext/SHARED_EXECUTOR (Executors/newFixedThreadPool thread-pool-size)}
+    ))
+
+
+(defn- mk-user-resources [worker]
+  ;;TODO: need to invoke a hook provided by the topology, giving it a chance to create user resources.
+  ;; this would be part of the initialization hook
+  ;; need to separate workertopologycontext into WorkerContext and WorkerUserContext.
+  ;; actually just do it via interfaces. just need to make sure to hide setResource from tasks
+  {})
+
+
 (defn mk-transfer-fn
   "Make a transfer function."
   [worker]
@@ -559,6 +575,8 @@
                               (HashMap.))
       :suicide-fn (mk-suicide-fn conf)
       :uptime (uptime-computer)
+      :default-shared-resources (mk-default-resources <>)
+      :user-shared-resources (mk-user-resources <>)
       :receiver-thread-count (get storm-conf WORKER-RECEIVER-THREAD-COUNT)
       :transfer-fn (mk-transfer-fn <>)
       )))
@@ -572,7 +590,7 @@
         executors (atom nil)
 
         ;; initialize executors
-;        _ (reset! executors (dofor [e (:executors worker)] (executor/mk-executor worker e)))
+        _ (reset! executors (dofor [e (:executors worker)] (executor/mk-executor worker e)))
         shutdown* (fn []
                     (log-message "Shutting down worker " storm-id " " assignment-id)
                     (log-message "Shutting down executors")
