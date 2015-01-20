@@ -28,7 +28,7 @@ import java.util.concurrent.ExecutorService;
 
 public class WorkerTopologyContext extends GeneralTopologyContext {
     public static final String SHARED_EXECUTOR = "executor";
-    
+
     private Integer _workerPort;
     private List<Integer> _workerTasks;
     private String _codeDir;
@@ -74,7 +74,7 @@ public class WorkerTopologyContext extends GeneralTopologyContext {
     public List<Integer> getThisWorkerTasks() {
         return _workerTasks;
     }
-    
+
     public Integer getThisWorkerPort() {
         return _workerPort;
     }
@@ -96,11 +96,11 @@ public class WorkerTopologyContext extends GeneralTopologyContext {
     public String getPIDDir() {
         return _pidDir;
     }
-    
+
     public Object getResource(String name) {
         return _userResources.get(name);
     }
-    
+
     public ExecutorService getSharedExecutor() {
         return (ExecutorService) _defaultResources.get(SHARED_EXECUTOR);
     }

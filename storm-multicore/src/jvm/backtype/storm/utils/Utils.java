@@ -17,6 +17,7 @@
  */
 package backtype.storm.utils;
 
+import backtype.storm.topology.IComponent;
 import clojure.lang.IFn;
 import clojure.lang.RT;
 import org.json.simple.JSONValue;
@@ -201,15 +202,9 @@ public class Utils {
         return normalizeConf(stormConf).equals(normalizeConf((Map) JSONValue.parse(JSONValue.toJSONString(stormConf))));
     }
 
-    //public static Object getSetComponentObject(ComponentObject obj) {
-    //    if(obj.getSetField()==ComponentObject._Fields.SERIALIZED_JAVA) {
-    //        return Utils.deserialize(obj.get_serialized_java());
-    //    } else if(obj.getSetField()==ComponentObject._Fields.JAVA_OBJECT) {
-    //        return obj.get_java_object();
-    //    } else {
-    //        return obj.get_shell();
-    //    }
-    //}
+    public static Object getSetComponentObject(IComponent obj) {
+        return obj;
+    }
 
     public static <S, T> T get(Map<S, T> m, S key, T def) {
         T ret = m.get(key);

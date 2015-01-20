@@ -19,7 +19,6 @@
   (:import [java.util Map])
   (:import [java.io File FileNotFoundException])
   (:import [java.nio.channels Channels WritableByteChannel])
-  (:require [backtype.storm.cluster :as cluster])
   (:import [backtype.storm.daemon Shutdownable])
   (:import [backtype.storm.generated StormTopology
             NotAliveException AlreadyAliveException
