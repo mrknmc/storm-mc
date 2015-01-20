@@ -27,6 +27,8 @@
             SubmitOptions$TopologyInitialStatus KillOptions])
   (:import [backtype.storm.generated Nimbus Nimbus$Iface])
   (:import [backtype.storm.utils Utils ThriftTopologyUtils])
+  (:require [backtype.storm.cluster :as cluster])
+  (:require [backtype.storm.daemon.worker :as worker])
   ;; this is required for the StormBase import to work
   (:require [backtype.storm.daemon.common])
   (:import [backtype.storm.daemon.common StormBase Assignment])
@@ -370,10 +372,11 @@
              (locking (:submit-lock nimbus)
                ;; this is a map from Thrift status names to keyword statuses
                (let [thrift-status->kw-status {SubmitOptions$TopologyInitialStatus/INACTIVE :inactive
-                                               SubmitOptions$TopologyInitialStatus/ACTIVE :active}]
-                 (start-storm nimbus topology total-storm-conf storm-name storm-id (thrift-status->kw-status (.getInitialStatus submitOptions))))
-               )
-               (mk-assignments nimbus topology storm-id total-storm-conf))
+                                               SubmitOptions$TopologyInitialStatus/ACTIVE :active}
+                     _ (start-storm nimbus topology total-storm-conf storm-name storm-id (thrift-status->kw-status (.getInitialStatus submitOptions)))
+                     assignment (mk-assignments nimbus topology storm-id total-storm-conf)
+                     executors (keys (:executor->worker-uuid assignment ))]
+                 (worker/mk-worker conf total-storm-conf storm-id topology executors))))
            (catch Throwable e
                             (log-warn-error e "Topology submission exception. (topology name='" storm-name "')")
                             (throw e)))))

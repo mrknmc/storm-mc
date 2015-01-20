@@ -91,43 +91,6 @@
 ;        flatten
 ;        set )))
 ;
-;(defn mk-transfer-local-fn [worker]
-;  (let [short-executor-receive-queue-map (:short-executor-receive-queue-map worker)
-;        task->short-executor (:task->short-executor worker)
-;        task-getter (comp #(get task->short-executor %) fast-first)]
-;    (fn [tuple-batch]
-;      (let [grouped (fast-group-by task-getter tuple-batch)]
-;        (fast-map-iter [[short-executor pairs] grouped]
-;          (let [q (short-executor-receive-queue-map short-executor)]
-;            (if q
-;              (disruptor/publish q pairs)
-;              (log-warn "Received invalid messages for unknown tasks. Dropping... ")
-;              )))))))
-;
-;(defn mk-transfer-fn [worker]
-;  (let [local-tasks (-> worker :task-ids set)
-;        local-transfer (:transfer-local-fn worker)
-;        ^DisruptorQueue transfer-queue (:transfer-queue worker)
-;        task->node+port (:cached-task->node+port worker)]
-;    (fn [^KryoTupleSerializer serializer tuple-batch]
-;      (let [local (ArrayList.)
-;            remoteMap (HashMap.)]
-;        (fast-list-iter [[task tuple :as pair] tuple-batch]
-;          (if (local-tasks task)
-;            (.add local pair)
-;
-;            ;;Using java objects directly to avoid performance issues in java code
-;            (let [node+port (get @task->node+port task)]
-;              (when (not (.get remoteMap node+port))
-;                (.put remoteMap node+port (ArrayList.)))
-;              (let [remote (.get remoteMap node+port)]
-;                (.add remote (TaskMessage. task (.serialize serializer tuple)))
-;                 ))))
-;
-;        (local-transfer local)
-;        (disruptor/publish transfer-queue remoteMap)
-;          ))))
-;
 ;(defn- stream->fields [^StormTopology topology component]
 ;  (->> (ThriftTopologyUtils/getComponentCommon topology component)
 ;       .get_streams
@@ -483,7 +446,7 @@
             q (short-executor-receive-queue-map short-executor)]
         (if q
           ;; publish the tuple
-          (disruptor/publish q tuple)
+          (disruptor/publish q [task tuple])
           (log-warn "Received invalid messages for unknown tasks. Dropping... ")
           )))))
 
@@ -558,7 +521,7 @@
       :assignment-id (uuid)
       :worker-id (uuid)
       :storm-cluster-state storm-cluster-state
-      :storm-active-atom (atom false)
+      :storm-active-atom (atom true)
       :executors executors
       :task-ids (->> receive-queue-map keys (map int) sort)
       :storm-conf storm-conf
