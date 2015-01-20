@@ -205,25 +205,7 @@
 ;
 ;
 ;
-;(defn executor-id->tasks [[first-task-id last-task-id]]
-;  (->> (range first-task-id (inc last-task-id))
-;       (map int)))
 ;
-;(defn worker-context [worker]
-;  (WorkerTopologyContext. (:system-topology worker)
-;                          (:storm-conf worker)
-;                          (:task->component worker)
-;                          (:component->sorted-tasks worker)
-;                          (:component->stream->fields worker)
-;                          (:storm-id worker)
-;                          (supervisor-storm-resources-path
-;                            (supervisor-stormdist-root (:conf worker) (:storm-id worker)))
-;                          (worker-pids-root (:conf worker) (:worker-id worker))
-;                          (:port worker)
-;                          (:task-ids worker)
-;                          (:default-shared-resources worker)
-;                          (:user-shared-resources worker)
-;                          ))
 ;
 ;
 ;(defn to-task->node+port [executor->node+port]
@@ -259,6 +241,29 @@
         (halt-process! 13 "Error on initialization")
         )))))
 
+
+;(defn worker-context [worker]
+;  (WorkerTopologyContext. (:system-topology worker)
+;    (:storm-conf worker)
+;    (:task->component worker)
+;    (:component->sorted-tasks worker)
+;    (:component->stream->fields worker)
+;    (:storm-id worker)
+;    (supervisor-storm-resources-path
+;      (supervisor-stormdist-root (:conf worker) (:storm-id worker)))
+;    (worker-pids-root (:conf worker) (:worker-id worker))
+;    (:port worker)
+;    (:task-ids worker)
+;    (:default-shared-resources worker)
+;    (:user-shared-resources worker)
+;    ))
+
+
+(defn executor-id->tasks
+  "[1 ] -> [1 2 3 4]"
+  [[first-task-id last-task-id]]
+  (->> (range first-task-id (inc last-task-id))
+       (map int)))
 
 (defn num-start-executors
   "Returns the number of executors to start with."
