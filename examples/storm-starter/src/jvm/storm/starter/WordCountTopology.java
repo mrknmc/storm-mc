@@ -38,22 +38,22 @@ import java.util.Map;
  * This topology demonstrates Storm's stream groupings and multilang capabilities.
  */
 public class WordCountTopology {
-  public static class SplitSentence extends ShellBolt implements IRichBolt {
-
-    public SplitSentence() {
-      super("python", "splitsentence.py");
-    }
-
-    @Override
-    public void declareOutputFields(OutputFieldsDeclarer declarer) {
-      declarer.declare(new Fields("word"));
-    }
-
-    @Override
-    public Map<String, Object> getComponentConfiguration() {
-      return null;
-    }
-  }
+//  public static class SplitSentence extends ShellBolt implements IRichBolt {
+//
+//    public SplitSentence() {
+//      super("python", "splitsentence.py");
+//    }
+//
+//    @Override
+//    public void declareOutputFields(OutputFieldsDeclarer declarer) {
+//      declarer.declare(new Fields("word"));
+//    }
+//
+//    @Override
+//    public Map<String, Object> getComponentConfiguration() {
+//      return null;
+//    }
+//  }
 
   public static class WordCount extends BaseBasicBolt {
     Map<String, Integer> counts = new HashMap<String, Integer>();
@@ -81,8 +81,8 @@ public class WordCountTopology {
 
     builder.setSpout("spout", new RandomSentenceSpout(), 5);
 
-    builder.setBolt("split", new SplitSentence(), 8).shuffleGrouping("spout");
-    builder.setBolt("count", new WordCount(), 12).fieldsGrouping("split", new Fields("word"));
+//    builder.setBolt("split", new SplitSentence(), 8).shuffleGrouping("spout");
+    builder.setBolt("count", new WordCount(), 12).fieldsGrouping("spout", new Fields("word"));
 
     Config conf = new Config();
     conf.setDebug(true);
