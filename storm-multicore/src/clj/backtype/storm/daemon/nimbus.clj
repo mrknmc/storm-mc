@@ -51,9 +51,9 @@
 (declare compute-executor->component)
 
 
-(defn- compute-executor->node+port
-  "convert {topology-id -> SchedulerAssignment} to
-           {topology-id -> {executor [node port]}}"
+(defn- compute-executor->worker-uuid
+  "convert {executor -> slot} to
+           {executor [uuid]}"
   [scheduler-assignment]
   (->> scheduler-assignment
     .getExecutorToSlot
@@ -78,7 +78,7 @@
 
 
 (defn- compute-executors
-  "Creates executor ids."
+  "Creates executor ids. Return [[task-id1 task-id2] [task-id3 task-id4]]"
   [nimbus topology storm-conf]
   (let [conf (:conf nimbus)
         component->executors (->> (all-components topology) (map-val num-start-executors))
@@ -117,7 +117,8 @@
 
 
 (defn mk-topology-details
-  ""
+  "Initialises a TopologyDetails object."
+  ;; TODO: Consider getting rid of this, it is not needed as there is access to topology and all the details
   [storm-id storm-conf topology executor->component]
   (TopologyDetails.
     storm-id
@@ -128,13 +129,14 @@
 
 
 ;;; public so it can be mocked out
-(defn compute-new-executor->node+port
+(defn compute-new-executor->worker-uuid
   [nimbus topology storm-id storm-conf]
   (let [;; map of executor -> component it's going to use
         executor->component (->> (compute-executor->component nimbus topology storm-conf)
                               (map-key (fn [[start-task end-task]]
                                          (ExecutorDetails. (int start-task) (int end-task)))))
         ;; create a slot for each cpu
+        ;; TODO: is it right to limit by number of CPUs here?
         all-scheduling-slots (repeatedly (compute-available-cpus) #(WorkerSlot.))
         topology-details (mk-topology-details storm-id storm-conf topology executor->component)
         cluster (Cluster. (:inimbus nimbus) all-scheduling-slots)
@@ -144,28 +146,33 @@
 
         new-scheduler-assignment (.getAssignment cluster)
 ;        ;; add more information to convert SchedulerAssignment to Assignment
-        new-topology->executor->node+port (compute-executor->node+port new-scheduler-assignment)]
-    new-topology->executor->node+port))
+        new-topology->executor->worker-uuid (compute-executor->worker-uuid new-scheduler-assignment)]
+    new-topology->executor->worker-uuid))
 
 
 (defn mk-assignments
   [nimbus topology storm-id storm-conf]
   (let [storm-cluster-state (:storm-cluster-state nimbus)
         ;; make the new assignments for topologies
-        executor->node+port (compute-new-executor->node+port nimbus topology storm-id storm-conf)
+        executor->worker-uuid (compute-new-executor->worker-uuid nimbus topology storm-id storm-conf)
         ;; construct the final Assignments by adding start-times etc into it
-        start-times (map-val (fn [& x] (current-time-secs)) executor->node+port )
-        assignment (Assignment. executor->node+port start-times)]
+        start-times (map-val (fn [& x] (current-time-secs)) executor->worker-uuid )
+        assignment (Assignment. executor->worker-uuid start-times)]
 
     ;; tasks figure out what tasks to talk to by looking at topology at runtime
     ;; only log/set when there's been a change to the assignment
     (log-message "Setting new assignment for topology id " storm-id ": " (pr-str assignment))
+    ;; TODO: there is only one Topo => no need for this to be a dict
     (.set-assignment! storm-cluster-state storm-id assignment)
     assignment))
 
 
 (defn mk-scheduler
-  "Make a scheduler for a Nimbus obj and prepare it."
+  "Make a scheduler for a Nimbus obj and prepare it:
+    1. take forced one if set
+    2. take custom one if set
+    3. fallback to DefaultScheduler
+  "
   [conf inimbus]
   (let [forced-scheduler (.getForcedScheduler inimbus)
         scheduler (cond
@@ -267,7 +274,6 @@
 (defn storm-active?
   "Checks whether storm is active by checking whether id is nil."
   [storm-cluster-state storm-name]
-  ; get-storm-id is in common.clj
   (not-nil? (get-storm-id storm-cluster-state storm-name)))
 
 
@@ -383,7 +389,7 @@
       (^void killTopologyWithOpts [this ^String storm-name ^KillOptions options]
         (check-storm-active! nimbus storm-name true)
         (let [wait-amt (.getWaitSecs options)]
-;          (transition-name! nimbus storm-name [:kill wait-amt] true)
+          ;; (transition-name! nimbus storm-name [:kill wait-amt] true)
           ))
 
       (getNimbusConf [this]
