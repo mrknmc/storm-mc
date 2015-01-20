@@ -647,6 +647,7 @@
   (into {} (filter (fn [[k v]] (pred k)) amap)))
 
 (defn rotating-random-range
+  "Randomly rotates a list/range."
   [choices]
   (let [rand (Random.)
         choices (ArrayList. choices)]
