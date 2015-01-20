@@ -222,6 +222,13 @@
 ;;; this avoid situation where node goes down and task doesn't know what to do information-wise
 ;(defrecord Assignment [master-code-dir node->host executor->node+port executor->start-time-secs])
 
+(def SYSTEM-STREAM-ID "__system")
+
+
+(defn has-ackers? [storm-conf]
+  (or (nil? (storm-conf TOPOLOGY-ACKER-EXECUTORS)) (> (storm-conf TOPOLOGY-ACKER-EXECUTORS) 0)))
+
+
 (defrecord Assignment [executor->worker-uuid executor->start-time-secs])
 
 
@@ -249,6 +256,8 @@
     (:component->sorted-tasks worker)
     (:component->stream->fields worker)
     (:storm-id worker)
+    ;; TODO: this is where *.py and *.rb files are looked for
+    ;; should be multilang, is distributed stuff right now
     (supervisor-storm-resources-path
       (supervisor-stormdist-root (:conf worker) (:storm-id worker)))
     (worker-pids-root (:conf worker) (:worker-id worker))
