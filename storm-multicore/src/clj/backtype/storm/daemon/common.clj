@@ -18,7 +18,7 @@
   (:import [backtype.storm.generated StormTopology InvalidTopologyException
             GlobalStreamId Grouping Grouping$GroupingType])
   (:import [backtype.storm.utils Utils])
-;  (:import [backtype.storm.task WorkerTopologyContext])
+  (:import [backtype.storm.task WorkerTopologyContext])
 ;  (:import [backtype.storm Constants])
 ;  (:import [backtype.storm.metric SystemBolt])
   (:require [clojure.set :as set])  
@@ -242,21 +242,21 @@
         )))))
 
 
-;(defn worker-context [worker]
-;  (WorkerTopologyContext. (:system-topology worker)
-;    (:storm-conf worker)
-;    (:task->component worker)
-;    (:component->sorted-tasks worker)
-;    (:component->stream->fields worker)
-;    (:storm-id worker)
-;    (supervisor-storm-resources-path
-;      (supervisor-stormdist-root (:conf worker) (:storm-id worker)))
-;    (worker-pids-root (:conf worker) (:worker-id worker))
-;    (:port worker)
-;    (:task-ids worker)
-;    (:default-shared-resources worker)
-;    (:user-shared-resources worker)
-;    ))
+(defn worker-context [worker]
+  (WorkerTopologyContext. (:system-topology worker)
+    (:storm-conf worker)
+    (:task->component worker)
+    (:component->sorted-tasks worker)
+    (:component->stream->fields worker)
+    (:storm-id worker)
+    (supervisor-storm-resources-path
+      (supervisor-stormdist-root (:conf worker) (:storm-id worker)))
+    (worker-pids-root (:conf worker) (:worker-id worker))
+    (int 0)
+    (:task-ids worker)
+    (:default-shared-resources worker)
+    (:user-shared-resources worker)
+    ))
 
 
 (defn executor-id->tasks
@@ -303,6 +303,21 @@
   "Converts a GroupingType enum into a keyword."
   [grouping]
   (grouping-constants (.getType grouping)))
+
+
+(defn field-grouping
+  "Return fields of a grouping."
+  [^Grouping grouping]
+  (when-not (= (grouping-type grouping) :fields)
+    (throw (IllegalArgumentException. "Tried to get grouping fields from non fields grouping")))
+  (.getFields grouping))
+
+
+(defn global-grouping?
+  "Global grouping if fields but empty."
+  [^Grouping grouping]
+  (and (= :fields (grouping-type grouping))
+    (empty? (field-grouping grouping))))
 
 
 (defn validate-structure! [^StormTopology topology]
