@@ -120,7 +120,7 @@ storm.messaging.netty.flush.check.interval.ms: 10
 
 ### topology.* configs are for specific executing storms
 topology.enable.message.timeouts: true
-topology.debug: false
+topology.debug: true
 topology.workers: 1
 topology.acker.executors: null
 topology.tasks: null
