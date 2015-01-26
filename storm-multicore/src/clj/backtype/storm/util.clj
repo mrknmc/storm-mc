@@ -970,6 +970,7 @@
 
 
 (defmacro -<>
+  "Allows recursive map definitions. See mk-worker for example."
   ([x] x)
   ([x form] (if (seq? form)
               (with-meta
