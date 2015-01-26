@@ -206,6 +206,12 @@
   (str stormroot file-path-separator RESOURCES-SUBDIR))
 
 
+(defn resources-path
+  "Retrieves the path to resources on the current Thread."
+  []
+  (.getPath (.getResource (.getContextClassLoader (Thread/currentThread)) RESOURCES-SUBDIR)))
+
+
 (defn read-supervisor-storm-conf
   [conf storm-id]
   (let [stormroot (supervisor-stormdist-root conf storm-id)

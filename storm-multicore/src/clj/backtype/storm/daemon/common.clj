@@ -258,8 +258,9 @@
     (:storm-id worker)
     ;; TODO: this is where *.py and *.rb files are looked for
     ;; should be multilang, is distributed stuff right now
-    (supervisor-storm-resources-path
-      (supervisor-stormdist-root (:conf worker) (:storm-id worker)))
+    (resources-path)
+;    (supervisor-storm-resources-path
+;      (supervisor-stormdist-root (:conf worker) (:storm-id worker)))
     (worker-pids-root (:conf worker) (:worker-id worker))
     (int 0)
     (:task-ids worker)
