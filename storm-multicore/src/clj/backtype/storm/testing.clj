@@ -184,8 +184,8 @@
 
 
 (defn kill-local-storm-cluster [cluster-map]
-  )
-;  (.shutdown (:nimbus cluster-map))
+  ;; TODO: kill worker and executors as well
+  (.shutdown (:nimbus cluster-map)))
 ;  (.close (:state cluster-map))
 ;  (.disconnect (:storm-cluster-state cluster-map))
 ;  (doseq [s @(:supervisors cluster-map)]
