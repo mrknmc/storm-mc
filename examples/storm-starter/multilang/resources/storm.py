@@ -80,7 +80,7 @@ def sync():
 def sendpid(heartbeatdir):
     pid = os.getpid()
     sendMsgToParent({'pid':pid})
-    open(heartbeatdir + "/" + str(pid), "w").close()    
+    # open(heartbeatdir + "/" + str(pid), "w").close()
 
 def emit(*args, **kwargs):
     __emit(*args, **kwargs)
@@ -109,7 +109,7 @@ def emitBolt(tup, stream=None, anchors = [], directTask=None):
         m["task"] = directTask
     m["tuple"] = tup
     sendMsgToParent(m)
-    
+
 def emitSpout(tup, stream=None, id=None, directTask=None):
     m = {"command": "emit"}
     if id is not None:

@@ -73,7 +73,7 @@ module Storm
     def send_pid(heartbeat_dir)
       pid = Process.pid
       send_msg_to_parent({'pid' => pid})
-      File.open("#{heartbeat_dir}/#{pid}", "w").close
+      # File.open("#{heartbeat_dir}/#{pid}", "w").close
     end
 
     def emit_bolt(tup, args = {})
