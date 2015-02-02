@@ -38,7 +38,6 @@
 ;
 ;
 ;(defmulti mk-executor-stats executor-selector)
-;(defmulti close-component executor-selector)
 ;
 ;
 ;(defn throttled-report-error-fn [executor]
@@ -76,11 +75,6 @@
 ;          [[nil (TupleImpl. worker-context [interval] Constants/SYSTEM_TASK_ID Constants/METRICS_TICK_STREAM_ID)]]))))))
 ;
 ;
-;(defmethod close-component :spout [executor-data spout]
-;  (.close spout))
-;
-;(defmethod close-component :bolt [executor-data bolt]
-;  (.cleanup bolt))
 ;
 ;;; TODO: refactor this to be part of an executor-specific map
 ;(defmethod mk-executor-stats :spout [_ rate]
@@ -91,6 +85,19 @@
 
 
 ;; Stuff below here should be ok
+
+(defn executor-selector [executor-data & _] (:type executor-data))
+
+(defmulti close-component executor-selector)
+(defmulti mk-threads executor-selector)
+
+
+(defmethod close-component :spout [executor-data spout]
+  (.close spout))
+
+
+(defmethod close-component :bolt [executor-data bolt]
+  (.cleanup bolt))
 
 
 (defn throttled-report-error-fn [executor]
@@ -296,10 +303,6 @@
                     clojurify-structure)]
     (merge storm-conf (apply dissoc spec-conf to-remove))
     ))
-
-
-(defn executor-selector [executor-data & _] (:type executor-data))
-(defmulti mk-threads executor-selector)
 
 
 (defn- tuple-execute-time-delta!
@@ -738,8 +741,8 @@
 ;        (doseq [user-context (map :user-context (vals task-datas))]
 ;          (doseq [hook (.getHooks user-context)]
 ;            (.cleanup hook)))
-;        (when @(:open-or-prepare-was-called? executor-data)
-;          (doseq [obj (map :object (vals task-datas))]
-;            (close-component executor-data obj)))
+        (when @(:open-or-prepare-was-called? executor-data)
+          (doseq [obj (map :object (vals task-datas))]
+            (close-component executor-data obj)))
         (log-message "Shut down executor " component-id ":" (pr-str executor-id)))
         )))
