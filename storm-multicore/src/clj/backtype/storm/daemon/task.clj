@@ -21,7 +21,7 @@
   (:import [backtype.storm.tuple Tuple TupleImpl])
   (:import [backtype.storm.utils Utils])
   (:import [backtype.storm.task TopologyContext WorkerTopologyContext ShellBolt])
-  (:import [backtype.storm.generated SpoutSpec Bolt ShellComponent])
+  (:import [backtype.storm.generated SpoutSpec Bolt])
   (:import [backtype.storm.spout ShellSpout])
   (:import [backtype.storm.hooks.info SpoutAckInfo SpoutFailInfo
             EmitInfo BoltFailInfo BoltAckInfo])
@@ -68,16 +68,15 @@
 (defn- get-task-object [^TopologyContext topology component-id]
   (let [spouts (.getSpouts topology)
         bolts (.getBolts topology)
-        obj (Utils/getSetComponentObject
-             (cond
+        obj (cond
               (contains? spouts component-id) (.getSpoutObject ^SpoutSpec (get spouts component-id))
               (contains? bolts component-id) (.getBoltObject ^Bolt (get bolts component-id))
-              true (throw-runtime "Could not find " component-id " in " topology)))
-        obj (if (instance? ShellComponent obj)
-              (if (contains? spouts component-id)
-                (ShellSpout. obj)
-                (ShellBolt. obj))
-              obj )]
+              true (throw-runtime "Could not find " component-id " in " topology))
+        obj (cond
+              ;; create copies otherwise it would be one component forking processes
+              (instance? ShellSpout obj) (ShellSpout. obj)
+              (instance? ShellBolt obj) (ShellBolt. obj)
+              true obj)]
 ;        obj (if (instance? JavaObject obj)
 ;              (thrift/instantiate-java-object obj)
 ;              obj )]

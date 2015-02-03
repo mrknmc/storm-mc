@@ -17,7 +17,6 @@
  */
 package backtype.storm.spout;
 
-import backtype.storm.generated.ShellComponent;
 import backtype.storm.multilang.ShellMsg;
 import backtype.storm.multilang.SpoutMsg;
 import backtype.storm.task.TopologyContext;
@@ -38,11 +37,15 @@ public class ShellSpout implements ISpout {
     private ShellProcess _process;
     private SpoutMsg _spoutMsg;
 
-    public ShellSpout(ShellComponent component) {
-        this(component.getExecutionCommand(), component.getScript());
+    public ShellSpout(ShellSpout spout) {
+        this(spout.getCommand());
     }
 
-    public ShellSpout(String... command) {
+    public String[] getCommand() {
+      return _command;
+    }
+
+  public ShellSpout(String... command) {
         _command = command;
     }
 

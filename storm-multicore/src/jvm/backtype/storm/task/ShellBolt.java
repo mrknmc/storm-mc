@@ -18,7 +18,6 @@
 package backtype.storm.task;
 
 import backtype.storm.Config;
-import backtype.storm.generated.ShellComponent;
 import backtype.storm.multilang.BoltMsg;
 import backtype.storm.multilang.ShellMsg;
 import backtype.storm.tuple.Tuple;
@@ -78,15 +77,19 @@ public class ShellBolt implements IBolt {
     private Thread _readerThread;
     private Thread _writerThread;
 
-    public ShellBolt(ShellComponent component) {
-        this(component.getExecutionCommand(), component.getScript());
+    public ShellBolt(ShellBolt bolt) {
+        this(bolt.getCommand());
     }
 
     public ShellBolt(String... command) {
         _command = command;
     }
 
-    public void prepare(Map stormConf, TopologyContext context,
+    public String[] getCommand() {
+      return _command;
+    }
+
+  public void prepare(Map stormConf, TopologyContext context,
                         final OutputCollector collector) {
         Object maxPending = stormConf.get(Config.TOPOLOGY_SHELLBOLT_MAX_PENDING);
         if (maxPending != null) {
