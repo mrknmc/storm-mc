@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -13,9 +15,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import sys
 import os
 import traceback
+
 from collections import deque
 
 try:
@@ -26,14 +30,17 @@ except ImportError:
 json_encode = lambda x: json.dumps(x)
 json_decode = lambda x: json.loads(x)
 
+
 #reads lines and reconstructs newlines appropriately
 def readMsg():
     msg = ""
     while True:
-        line = sys.stdin.readline()[0:-1]
-        if line == "end":
+        line = sys.stdin.readline()
+        if not line:
+            raise Exception('Read EOF from stdin')
+        if line[0:-1] == "end":
             break
-        msg = msg + line + "\n"
+        msg = msg + line
     return json_decode(msg[0:-1])
 
 MODE = None
@@ -87,7 +94,7 @@ def emit(*args, **kwargs):
     return readTaskIds()
 
 def emitDirect(task, *args, **kwargs):
-    kwargs[directTask] = task
+    kwargs["directTask"] = task
     __emit(*args, **kwargs)
 
 def __emit(*args, **kwargs):
@@ -127,15 +134,36 @@ def ack(tup):
 def fail(tup):
     sendMsgToParent({"command": "fail", "id": tup.id})
 
-def log(msg):
-    sendMsgToParent({"command": "log", "msg": msg})
+def reportError(msg):
+    sendMsgToParent({"command": "error", "msg": msg})
+
+def log(msg, level=2):
+    sendMsgToParent({"command": "log", "msg": msg, "level":level})
+
+def logTrace(msg):
+    log(msg, 0)
+
+def logDebug(msg):
+    log(msg, 1)
+
+def logInfo(msg):
+    log(msg, 2)
+
+def logWarn(msg):
+    log(msg, 3)
+
+def logError(msg):
+    log(msg, 4)
+
+def rpcMetrics(name, params):
+    sendMsgToParent({"command": "metrics", "name": name, "params": params})
 
 def initComponent():
     setupInfo = readMsg()
     sendpid(setupInfo['pidDir'])
     return [setupInfo['conf'], setupInfo['context']]
 
-class Tuple:
+class Tuple(object):
     def __init__(self, id, component, stream, task, values):
         self.id = id
         self.component = component
@@ -145,10 +173,13 @@ class Tuple:
 
     def __repr__(self):
         return '<%s%s>' % (
-                self.__class__.__name__,
-                ''.join(' %s=%r' % (k, self.__dict__[k]) for k in sorted(self.__dict__.keys())))
+            self.__class__.__name__,
+            ''.join(' %s=%r' % (k, self.__dict__[k]) for k in sorted(self.__dict__.keys())))
 
-class Bolt:
+    def is_heartbeat_tuple(self):
+        return self.task == -1 and self.stream == "__heartbeat"
+
+class Bolt(object):
     def initialize(self, stormconf, context):
         pass
 
@@ -159,15 +190,18 @@ class Bolt:
         global MODE
         MODE = Bolt
         conf, context = initComponent()
-        self.initialize(conf, context)
         try:
+            self.initialize(conf, context)
             while True:
                 tup = readTuple()
-                self.process(tup)
+                if tup.is_heartbeat_tuple():
+                    sync()
+                else:
+                    self.process(tup)
         except Exception, e:
-            log(traceback.format_exc(e))
+            reportError(traceback.format_exc(e))
 
-class BasicBolt:
+class BasicBolt(object):
     def initialize(self, stormconf, context):
         pass
 
@@ -179,17 +213,24 @@ class BasicBolt:
         MODE = Bolt
         global ANCHOR_TUPLE
         conf, context = initComponent()
-        self.initialize(conf, context)
         try:
+            self.initialize(conf, context)
             while True:
                 tup = readTuple()
-                ANCHOR_TUPLE = tup
-                self.process(tup)
-                ack(tup)
+                if tup.is_heartbeat_tuple():
+                    sync()
+                else:
+                    ANCHOR_TUPLE = tup
+                    try:
+                        self.process(tup)
+                        ack(tup)
+                    except Exception, e:
+                        reportError(traceback.format_exc(e))
+                        fail(tup)
         except Exception, e:
-            log(traceback.format_exc(e))
+            reportError(traceback.format_exc(e))
 
-class Spout:
+class Spout(object):
     def initialize(self, conf, context):
         pass
 
@@ -206,8 +247,8 @@ class Spout:
         global MODE
         MODE = Spout
         conf, context = initComponent()
-        self.initialize(conf, context)
         try:
+            self.initialize(conf, context)
             while True:
                 msg = readCommand()
                 if msg["command"] == "next":
@@ -218,4 +259,4 @@ class Spout:
                     self.fail(msg["id"])
                 sync()
         except Exception, e:
-            log(traceback.format_exc(e))
+            reportError(traceback.format_exc(e))
