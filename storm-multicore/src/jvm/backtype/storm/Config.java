@@ -18,9 +18,9 @@
 package backtype.storm;
 
 import backtype.storm.ConfigValidation;
-import backtype.storm.serialization.IKryoDecorator;
-import backtype.storm.serialization.IKryoFactory;
-import com.esotericsoftware.kryo.Serializer;
+//import backtype.storm.serialization.IKryoDecorator;
+//import backtype.storm.serialization.IKryoFactory;
+//import com.esotericsoftware.kryo.Serializer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -573,8 +573,8 @@ public class Config extends HashMap<String, Object> {
      *
      * See Kryo's documentation for more information about writing custom serializers.
      */
-    public static final String TOPOLOGY_KRYO_REGISTER = "topology.kryo.register";
-    public static final Object TOPOLOGY_KRYO_REGISTER_SCHEMA = ConfigValidation.KryoRegValidator;
+//    public static final String TOPOLOGY_KRYO_REGISTER = "topology.kryo.register";
+//    public static final Object TOPOLOGY_KRYO_REGISTER_SCHEMA = ConfigValidation.KryoRegValidator;
 
     /**
      * A list of classes that customize storm's kryo instance during start-up.
@@ -582,16 +582,16 @@ public class Config extends HashMap<String, Object> {
      * listed class is instantiated with 0 arguments, then its 'decorate' method 
      * is called with storm's kryo instance as the only argument.
      */
-    public static final String TOPOLOGY_KRYO_DECORATORS = "topology.kryo.decorators";
-    public static final Object TOPOLOGY_KRYO_DECORATORS_SCHEMA = ConfigValidation.StringsValidator;
+//    public static final String TOPOLOGY_KRYO_DECORATORS = "topology.kryo.decorators";
+//    public static final Object TOPOLOGY_KRYO_DECORATORS_SCHEMA = ConfigValidation.StringsValidator;
 
     /**
      * Class that specifies how to create a Kryo instance for serialization. Storm will then apply
      * topology.kryo.register and topology.kryo.decorators on top of this. The default implementation
      * implements topology.fall.back.on.java.serialization and turns references off.
      */
-    public static final String TOPOLOGY_KRYO_FACTORY = "topology.kryo.factory";
-    public static final Object TOPOLOGY_KRYO_FACTORY_SCHEMA = String.class;
+//    public static final String TOPOLOGY_KRYO_FACTORY = "topology.kryo.factory";
+//    public static final Object TOPOLOGY_KRYO_FACTORY_SCHEMA = String.class;
 
 
     /**
@@ -604,8 +604,8 @@ public class Config extends HashMap<String, Object> {
      * By setting this config to true, Storm will ignore that it doesn't have those other serializations
      * rather than throw an error.
      */
-    public static final String TOPOLOGY_SKIP_MISSING_KRYO_REGISTRATIONS= "topology.skip.missing.kryo.registrations";
-    public static final Object TOPOLOGY_SKIP_MISSING_KRYO_REGISTRATIONS_SCHEMA = Boolean.class;
+//    public static final String TOPOLOGY_SKIP_MISSING_KRYO_REGISTRATIONS= "topology.skip.missing.kryo.registrations";
+//    public static final Object TOPOLOGY_SKIP_MISSING_KRYO_REGISTRATIONS_SCHEMA = Boolean.class;
 
     /*
      * A list of classes implementing IMetricsConsumer (See storm.yaml.example for exact config format).
@@ -876,23 +876,23 @@ public class Config extends HashMap<String, Object> {
         setMessageTimeoutSecs(this, secs);
     }
     
-    public static void registerSerialization(Map conf, Class klass) {
-        getRegisteredSerializations(conf).add(klass.getName());
-    }
+//    public static void registerSerialization(Map conf, Class klass) {
+//        getRegisteredSerializations(conf).add(klass.getName());
+//    }
 
-    public void registerSerialization(Class klass) {
-        registerSerialization(this, klass);
-    }
+//    public void registerSerialization(Class klass) {
+//        registerSerialization(this, klass);
+//    }
     
-    public static void registerSerialization(Map conf, Class klass, Class<? extends Serializer> serializerClass) {
-        Map<String, String> register = new HashMap<String, String>();
-        register.put(klass.getName(), serializerClass.getName());
-        getRegisteredSerializations(conf).add(register);        
-    }
+//    public static void registerSerialization(Map conf, Class klass, Class<? extends Serializer> serializerClass) {
+//        Map<String, String> register = new HashMap<String, String>();
+//        register.put(klass.getName(), serializerClass.getName());
+//        getRegisteredSerializations(conf).add(register);
+//    }
 
-    public void registerSerialization(Class klass, Class<? extends Serializer> serializerClass) {
-        registerSerialization(this, klass, serializerClass);
-    }
+//    public void registerSerialization(Class klass, Class<? extends Serializer> serializerClass) {
+//        registerSerialization(this, klass, serializerClass);
+//    }
     
     public void registerMetricsConsumer(Class klass, Object argument, long parallelismHint) {
         HashMap m = new HashMap();
@@ -914,29 +914,29 @@ public class Config extends HashMap<String, Object> {
         registerMetricsConsumer(klass, null, 1L);
     }
 
-    public static void registerDecorator(Map conf, Class<? extends IKryoDecorator> klass) {
-        getRegisteredDecorators(conf).add(klass.getName());
-    }
+//    public static void registerDecorator(Map conf, Class<? extends IKryoDecorator> klass) {
+//        getRegisteredDecorators(conf).add(klass.getName());
+//    }
 
-    public void registerDecorator(Class<? extends IKryoDecorator> klass) {
-        registerDecorator(this, klass);
-    }
+//    public void registerDecorator(Class<? extends IKryoDecorator> klass) {
+//        registerDecorator(this, klass);
+//    }
     
-    public static void setKryoFactory(Map conf, Class<? extends IKryoFactory> klass) {
-        conf.put(Config.TOPOLOGY_KRYO_FACTORY, klass.getName());
-    }
+//    public static void setKryoFactory(Map conf, Class<? extends IKryoFactory> klass) {
+//        conf.put(Config.TOPOLOGY_KRYO_FACTORY, klass.getName());
+//    }
 
-    public void setKryoFactory(Class<? extends IKryoFactory> klass) {
-        setKryoFactory(this, klass);
-    }
+//    public void setKryoFactory(Class<? extends IKryoFactory> klass) {
+//        setKryoFactory(this, klass);
+//    }
 
-    public static void setSkipMissingKryoRegistrations(Map conf, boolean skip) {
-        conf.put(Config.TOPOLOGY_SKIP_MISSING_KRYO_REGISTRATIONS, skip);
-    }
+//    public static void setSkipMissingKryoRegistrations(Map conf, boolean skip) {
+//        conf.put(Config.TOPOLOGY_SKIP_MISSING_KRYO_REGISTRATIONS, skip);
+//    }
 
-    public void setSkipMissingKryoRegistrations(boolean skip) {
-       setSkipMissingKryoRegistrations(this, skip);
-    }
+//    public void setSkipMissingKryoRegistrations(boolean skip) {
+//       setSkipMissingKryoRegistrations(this, skip);
+//    }
     
     public static void setMaxTaskParallelism(Map conf, int max) {
         conf.put(Config.TOPOLOGY_MAX_TASK_PARALLELISM, max);
@@ -970,25 +970,25 @@ public class Config extends HashMap<String, Object> {
         setFallBackOnJavaSerialization(this, fallback);
     }    
     
-    private static List getRegisteredSerializations(Map conf) {
-        List ret;
-        if(!conf.containsKey(Config.TOPOLOGY_KRYO_REGISTER)) {
-            ret = new ArrayList();
-        } else {
-            ret = new ArrayList((List) conf.get(Config.TOPOLOGY_KRYO_REGISTER));
-        }
-        conf.put(Config.TOPOLOGY_KRYO_REGISTER, ret);
-        return ret;
-    }
+//    private static List getRegisteredSerializations(Map conf) {
+//        List ret;
+//        if(!conf.containsKey(Config.TOPOLOGY_KRYO_REGISTER)) {
+//            ret = new ArrayList();
+//        } else {
+//            ret = new ArrayList((List) conf.get(Config.TOPOLOGY_KRYO_REGISTER));
+//        }
+//        conf.put(Config.TOPOLOGY_KRYO_REGISTER, ret);
+//        return ret;
+//    }
     
-    private static List getRegisteredDecorators(Map conf) {
-        List ret;
-        if(!conf.containsKey(Config.TOPOLOGY_KRYO_DECORATORS)) {
-            ret = new ArrayList();
-        } else {
-            ret = new ArrayList((List) conf.get(Config.TOPOLOGY_KRYO_DECORATORS));
-        }
-        conf.put(Config.TOPOLOGY_KRYO_DECORATORS, ret);
-        return ret;
-    }
+//    private static List getRegisteredDecorators(Map conf) {
+//        List ret;
+//        if(!conf.containsKey(Config.TOPOLOGY_KRYO_DECORATORS)) {
+//            ret = new ArrayList();
+//        } else {
+//            ret = new ArrayList((List) conf.get(Config.TOPOLOGY_KRYO_DECORATORS));
+//        }
+//        conf.put(Config.TOPOLOGY_KRYO_DECORATORS, ret);
+//        return ret;
+//    }
 }

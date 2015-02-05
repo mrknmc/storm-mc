@@ -17,9 +17,6 @@
  */
 package backtype.storm.tuple;
 
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -79,20 +76,20 @@ public class MessageId {
         return _anchorsToIds.toString();
     }
 
-    public void serialize(Output out) throws IOException {
-        out.writeInt(_anchorsToIds.size(), true);
-        for(Entry<Long, Long> anchorToId: _anchorsToIds.entrySet()) {
-            out.writeLong(anchorToId.getKey());
-            out.writeLong(anchorToId.getValue());
-        }
-    }
+//    public void serialize(Output out) throws IOException {
+//        out.writeInt(_anchorsToIds.size(), true);
+//        for(Entry<Long, Long> anchorToId: _anchorsToIds.entrySet()) {
+//            out.writeLong(anchorToId.getKey());
+//            out.writeLong(anchorToId.getValue());
+//        }
+//    }
 
-    public static MessageId deserialize(Input in) throws IOException {
-        int numAnchors = in.readInt(true);
-        Map<Long, Long> anchorsToIds = new HashMap<Long, Long>();
-        for(int i=0; i<numAnchors; i++) {
-            anchorsToIds.put(in.readLong(), in.readLong());
-        }
-        return new MessageId(anchorsToIds);
-    }
+//    public static MessageId deserialize(Input in) throws IOException {
+//        int numAnchors = in.readInt(true);
+//        Map<Long, Long> anchorsToIds = new HashMap<Long, Long>();
+//        for(int i=0; i<numAnchors; i++) {
+//            anchorsToIds.put(in.readLong(), in.readLong());
+//        }
+//        return new MessageId(anchorsToIds);
+//    }
 }

@@ -48,33 +48,23 @@
 
         <!-- dependency versions -->
         <clojure.version>1.5.1</clojure.version>
-        <compojure.version>1.1.3</compojure.version>
-        <hiccup.version>0.3.6</hiccup.version>
         <commons-io.version>2.4</commons-io.version>
         <commons-lang.version>2.5</commons-lang.version>
         <commons-exec.version>1.1</commons-exec.version>
         <clj-time.version>0.4.1</clj-time.version>
-        <curator.version>2.4.0</curator.version>
         <json-simple.version>1.1</json-simple.version>
-        <ring.version>0.3.11</ring.version>
         <clojure.tools.logging.version>0.2.3</clojure.tools.logging.version>
-        <clojure.math.numeric-tower.version>0.0.1</clojure.math.numeric-tower.version>
-        <carbonite.version>1.4.0</carbonite.version>
         <snakeyaml.version>1.11</snakeyaml.version>
-        <httpclient.version>4.3.3</httpclient.version>
         <clojure.tools.cli.version>0.2.4</clojure.tools.cli.version>
         <disruptor.version>2.10.1</disruptor.version>
-        <jgrapht.version>0.9.0</jgrapht.version>
         <guava.version>13.0</guava.version>
         <logback-classic.version>1.0.6</logback-classic.version>
         <log4j-over-slf4j.version>1.6.6</log4j-over-slf4j.version>
-        <netty.version>3.6.3.Final</netty.version>
         <clojure.tools.nrepl.version>0.2.3</clojure.tools.nrepl.version>
         <clojure-complete.version>0.2.3</clojure-complete.version>
         <mockito.version>1.9.5</mockito.version>
         <reply.version>0.3.0</reply.version>
         <conjure.version>2.1.3</conjure.version>
-        <zookeeper.version>3.4.5</zookeeper.version>
         <affinity.version>2.1.6</affinity.version>
 
     </properties>
@@ -107,71 +97,9 @@
                 <version>${clj-time.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.apache.zookeeper</groupId>
-                <artifactId>zookeeper</artifactId>
-                <version>${zookeeper.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.sun.jmx</groupId>
-                        <artifactId>jmxri</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.sun.jdmk</groupId>
-                        <artifactId>jmxtools</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>javax.jms</groupId>
-                        <artifactId>jms</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.slf4j</groupId>
-                        <artifactId>slf4j-api</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.slf4j</groupId>
-                        <artifactId>slf4j-log4j12</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>log4j</groupId>
-                        <artifactId>log4j</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.curator</groupId>
-                <artifactId>curator-framework</artifactId>
-                <version>${curator.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <artifactId>log4j</artifactId>
-                        <groupId>log4j</groupId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
                 <groupId>com.googlecode.json-simple</groupId>
                 <artifactId>json-simple</artifactId>
                 <version>${json-simple.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>compojure</groupId>
-                <artifactId>compojure</artifactId>
-                <version>${compojure.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>hiccup</groupId>
-                <artifactId>hiccup</artifactId>
-                <version>${hiccup.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>ring</groupId>
-                <artifactId>ring-devel</artifactId>
-                <version>${ring.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>ring</groupId>
-                <artifactId>ring-jetty-adapter</artifactId>
-                <version>${ring.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.clojure</groupId>
@@ -179,24 +107,9 @@
                 <version>${clojure.tools.logging.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.clojure</groupId>
-                <artifactId>math.numeric-tower</artifactId>
-                <version>${clojure.math.numeric-tower.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.twitter</groupId>
-                <artifactId>carbonite</artifactId>
-                <version>${carbonite.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
                 <version>${snakeyaml.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.httpcomponents</groupId>
-                <artifactId>httpclient</artifactId>
-                <version>${httpclient.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.clojure</groupId>
@@ -207,11 +120,6 @@
                 <groupId>com.googlecode.disruptor</groupId>
                 <artifactId>disruptor</artifactId>
                 <version>${disruptor.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.jgrapht</groupId>
-                <artifactId>jgrapht-core</artifactId>
-                <version>${jgrapht.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
@@ -227,11 +135,6 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>log4j-over-slf4j</artifactId>
                 <version>${log4j-over-slf4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty</artifactId>
-                <version>${netty.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.openhft</groupId>
@@ -273,12 +176,6 @@
                 <artifactId>conjure</artifactId>
                 <version>${conjure.version}</version>
                 <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.thrift</groupId>
-                <artifactId>libthrift</artifactId>
-                <version>0.7.0</version>
-                <scope>compile</scope>
             </dependency>
             <!-- used by examples/storm-starter -->
             <dependency>
@@ -369,12 +266,6 @@
                     <version>1.3.18</version>
                     <extensions>true</extensions>
                 </plugin>
-                <!-- <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-report-plugin</artifactId>
-                    <version>2.16</version>
-                </plugin> -->
-
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-gpg-plugin</artifactId>
@@ -505,18 +396,6 @@
                         <exclude>SECURITY.md</exclude>
                         <exclude>VERSION</exclude>
                         <exclude>TODO</exclude>
-                        <!-- thrift-generated code -->
-                        <exclude>**/src/py/**</exclude>
-
-                        <!-- the following are in the NOTICE file -->
-                        <exclude>**/src/ui/public/js/jquery-1.6.2.min.js</exclude>
-                        <exclude>**/src/ui/public/js/jquery.cookies.2.2.0.min.js</exclude>
-                        <exclude>**/src/ui/public/js/jquery.tablesorter.min.js</exclude>
-                        <exclude>**/src/ui/public/js/arbor.js</exclude>
-                        <exclude>**/src/ui/public/js/arbor-graphics.js</exclude>
-                        <exclude>**/src/ui/public/js/arbor-tween.js</exclude>
-                        <exclude>**/src/ui/public/js/jquery.mustache.js</exclude>
-                        <exclude>**/src/ui/public/js/purl.js</exclude>
 
                         <!-- generated by shade plugin -->
                         <exclude>**/dependency-reduced-pom.xml</exclude>
