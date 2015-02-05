@@ -15,7 +15,8 @@
 ;; limitations under the License.
 
 (ns backtype.storm.LocalCluster
-  (:use [backtype.storm testing config])
+  (:use [backtype.storm util config])
+  (:require [backtype.storm.daemon.nimbus :as nimbus])
   (:import [java.util Map])
   (:gen-class
     :init init
@@ -23,65 +24,49 @@
     :constructors {[] [] [java.util.Map] []}
     :state state))
 
+
+(defnk mk-local-cluster
+  "Reads the daemon config, creates a nimbus thread."
+  [:daemon-conf {} :inimbus nil]
+  (let [daemon-conf (merge (read-storm-config)
+                      {TOPOLOGY-ENABLE-MESSAGE-TIMEOUTS false
+                       TOPOLOGY-TRIDENT-BATCH-EMIT-INTERVAL-MILLIS 50}
+                      daemon-conf)
+        nimbus (nimbus/service-handler
+                 daemon-conf
+                 (if inimbus inimbus (nimbus/standalone-nimbus)))
+        cluster-map {:nimbus nimbus
+                     :daemon-conf daemon-conf}]
+    (.addShutdownHook (Runtime/getRuntime) (Thread. (fn [] (.shutdown nimbus))))
+    cluster-map))
+
+
 (defn -init
   ([]
-   (let [ret (mk-local-storm-cluster
+   (let [ret (mk-local-cluster
                :daemon-conf
                {TOPOLOGY-ENABLE-MESSAGE-TIMEOUTS true})]
      [[] ret]))
   ([^Map stateMap]
    [[] stateMap]))
 
+
 (defn -submitTopology
   [this name conf topology]
-  (submit-local-topology
-    (:nimbus (. this state)) name conf topology))
+  (.submitTopology (:nimbus (. this state)) name conf topology))
 
-(defn -submitTopologyWithOpts
-  [this name conf topology submit-opts]
-  (submit-local-topology-with-opts
-    (:nimbus (. this state)) name conf topology submit-opts))
 
 (defn -shutdown
   [this]
-  (kill-local-storm-cluster (. this state)))
+  (.shutdown (:nimbus (. this state))))
+
 
 (defn -killTopology
   [this name]
   (.killTopology (:nimbus (. this state)) name))
 
-(defn -getTopologyConf
-  [this id]
-  (.getTopologyConf (:nimbus (. this state)) id))
-
-(defn -getTopology
-  [this id]
-  (.getTopology (:nimbus (. this state)) id))
-
-;(defn -getClusterInfo
-;  [this]
-;  (.getClusterInfo (:nimbus (. this state))))
-;
-;(defn -getTopologyInfo
-;  [this id]
-;  (.getTopologyInfo (:nimbus (. this state)) id))
-
-(defn -killTopologyWithOpts
-  [this name opts]
-  (.killTopologyWithOpts (:nimbus (. this state)) name opts))
-
-(defn -activate
-  [this name]
-  (.activate (:nimbus (. this state)) name))
-
-(defn -deactivate
-  [this name]
-  (.deactivate (:nimbus (. this state)) name))
-
-;(defn -rebalance
-;  [this name opts]
-;  (.rebalance (:nimbus (. this state)) name opts))
 
 (defn -getState
   [this]
   (.state this))
+
