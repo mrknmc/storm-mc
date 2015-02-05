@@ -22,11 +22,9 @@
   (:import [backtype.storm.daemon Shutdownable])
   (:import [backtype.storm.generated StormTopology
             NotAliveException AlreadyAliveException
-            InvalidTopologyException SubmitOptions
-            SubmitOptions$TopologyInitialStatus KillOptions])
+            InvalidTopologyException])
   (:import [backtype.storm.generated Nimbus Nimbus$Iface])
   (:import [backtype.storm.utils Utils ThriftTopologyUtils])
-  (:require [backtype.storm.cluster :as cluster])
   (:require [backtype.storm.daemon.worker :as worker])
   ;; this is required for the StormBase import to work
   (:require [backtype.storm.daemon.common])
@@ -38,7 +36,7 @@
   (:use [backtype.storm util timer log config])
   (:use [backtype.storm.daemon common])
   (:gen-class
-   :methods [^{:static true} [launch [backtype.storm.scheduler.INimbus] void]]))
+    :methods [^{:static true} [launch [backtype.storm.scheduler.INimbus] void]]))
 
 
 (defn compute-available-cpus
@@ -66,16 +64,6 @@
   "Executor id is the first and last task it will run."
   [task-ids]
   [(first task-ids) (last task-ids)])
-
-
-(defn get-storm-id
-  "Retrieve an id of a topology, given a name."
-  [storm-cluster-state storm-name]
-  (let [active-storms (.active-storms storm-cluster-state)]
-    (find-first
-      #(= storm-name (:storm-name (.storm-base storm-cluster-state % nil)))
-      active-storms)
-    ))
 
 
 (defn- compute-executors
@@ -141,20 +129,20 @@
         all-scheduling-slots (repeatedly (compute-available-cpus) #(WorkerSlot.))
         topology-details (mk-topology-details storm-id storm-conf topology executor->component)
         cluster (Cluster. (:inimbus nimbus) all-scheduling-slots)
-;        ;; call scheduler.schedule to schedule all the topologies
-;        ;; the new assignments for all the topologies are in the cluster object.
+        ;        ;; call scheduler.schedule to schedule all the topologies
+        ;        ;; the new assignments for all the topologies are in the cluster object.
         _ (.schedule (:scheduler nimbus) topology-details cluster)
 
         new-scheduler-assignment (.getAssignment cluster)
-;        ;; add more information to convert SchedulerAssignment to Assignment
+        ;        ;; add more information to convert SchedulerAssignment to Assignment
         new-topology->executor->worker-uuid (compute-executor->worker-uuid new-scheduler-assignment)]
     new-topology->executor->worker-uuid))
 
 
 (defn mk-assignments
   [nimbus topology storm-id storm-conf]
-  (let [storm-cluster-state (:storm-cluster-state nimbus)
-        ;; make the new assignments for topologies
+  ;  (let [storm-cluster-state (:storm-cluster-state nimbus)
+  (let [;; make the new assignments for topologies
         executor->worker-uuid (compute-new-executor->worker-uuid nimbus topology storm-id storm-conf)
         ;; construct the final Assignments by adding start-times etc into it
         start-times (map-val (fn [& x] (current-time-secs)) executor->worker-uuid )
@@ -164,7 +152,7 @@
     ;; only log/set when there's been a change to the assignment
     (log-message "Setting new assignment for topology id " storm-id ": " (pr-str assignment))
     ;; TODO: there is only one Topo => no need for this to be a dict
-    (.set-assignment! storm-cluster-state storm-id assignment)
+    ;    (.set-assignment! storm-cluster-state storm-id assignment)
     assignment))
 
 
@@ -198,24 +186,6 @@
     (map (fn [e] (if (map? e) e {e nil})))
     (apply merge)
     ))
-
-
-(defn- start-storm
-  "Starts the StormTopology on the Nimbus."
-  [nimbus topology storm-conf storm-name storm-id topology-initial-status]
-  {:pre [(#{:active :inactive} topology-initial-status)]}
-  (let [storm-cluster-state (:storm-cluster-state nimbus)
-        conf (:conf nimbus)
-        topology (system-topology! storm-conf topology)
-        num-executors (->> (all-components topology) (map-val num-start-executors))]
-    (log-message "Activating " storm-name ": " storm-id)
-    (.activate-storm! storm-cluster-state
-      storm-id
-      (StormBase. storm-name
-        (current-time-secs)
-        {:type topology-initial-status}
-        (storm-conf TOPOLOGY-WORKERS)
-        num-executors))))
 
 
 (defn normalize-conf [conf storm-conf ^StormTopology topology]
@@ -267,27 +237,9 @@
   (doseq [[_ component] (all-components topology)]
     (.setConf
       (.getCommon component)
-        ;; this shit updates the conf of a component with {TOPOLOGY-TASKS = max(TOPOLOGY-MAX-TASK-PARALLELISM, num-tasks)
-        (merge (component-conf component) {TOPOLOGY-TASKS (component-parallelism storm-conf component)})))
+      ;; this shit updates the conf of a component with {TOPOLOGY-TASKS = max(TOPOLOGY-MAX-TASK-PARALLELISM, num-tasks)
+      (merge (component-conf component) {TOPOLOGY-TASKS (component-parallelism storm-conf component)})))
   topology)
-
-
-(defn storm-active?
-  "Checks whether storm is active by checking whether id is nil."
-  [storm-cluster-state storm-name]
-  (not-nil? (get-storm-id storm-cluster-state storm-name)))
-
-
-(defn check-storm-active!
-  "Checks that the status of the Storm is equal to what is passed in."
-  [nimbus storm-name active?]
-  (if (= (not active?)
-        (storm-active? (:storm-cluster-state nimbus)
-          storm-name))
-    (if active?
-      (throw (NotAliveException. (str storm-name " is not alive")))
-      (throw (AlreadyAliveException. (str storm-name " is already active"))))
-    ))
 
 
 (def DISALLOWED-TOPOLOGY-NAME-STRS #{"/" "." ":" "\\"})
@@ -308,9 +260,7 @@
   [conf inimbus]
   {:conf conf
    :inimbus inimbus
-   :storm-cluster-state (cluster/mk-storm-cluster-state conf)
    :submitted-count (atom 0)
-   :submit-lock (Object.)
    :uptime (uptime-computer)
    ; by default this is DefaultTopologyValidator
    :validator (new-instance (conf NIMBUS-TOPOLOGY-VALIDATOR))
@@ -327,82 +277,60 @@
   ; standalone Nimbus doesn't prepare - maybe get rid of this
   (.prepare inimbus conf)
   (log-message "Starting Nimbus with conf " conf)
-  (let [nimbus (nimbus-data conf inimbus)]
+  (let [nimbus (nimbus-data conf inimbus)
+        workers (atom [])
+        shutdown* (fn []
+                    (log-message "Shutting down master")
+                    (cancel-timer (:timer nimbus))
+                    (doseq [worker @workers] (.shutdown worker))
+                    (log-message "Shut down master"))]
     ; prepare the validator
     (.prepare ^backtype.storm.nimbus.ITopologyValidator (:validator nimbus) conf)
     (reify Nimbus$Iface
-      (^void submitTopologyWithOpts
-       [this ^String storm-name ^Map topo-conf ^StormTopology topology
-        ^SubmitOptions submitOptions]
+      (^void submitTopology
+        [this ^String storm-name ^Map topo-conf ^StormTopology topology]
         (let [topo-conf (clojurify-structure topo-conf)]
           (try
-           (assert (not-nil? submitOptions))
-           (validate-topology-name! storm-name)
-           ; check that the storm is not running
-           (check-storm-active! nimbus storm-name false)
-           ; there is no need to unserialize the conf, it should not be at this point
-           (try
-             (validate-configs-with-schemas topo-conf)
-             (catch IllegalArgumentException ex
-                                             (throw (InvalidTopologyException. (.getMessage ex)))))
-           (.validate ^backtype.storm.nimbus.ITopologyValidator (:validator nimbus)
-                                                                storm-name
-                                                                topo-conf
-                                                                topology)
-           ; here un-serializing ends, with validation
-           ; increment number of submitted
-           (swap! (:submitted-count nimbus) inc)
-           ; here we create a "unique" storm-id, set it up and start it, also makes assignments
-           (let [storm-id (str storm-name "-" @(:submitted-count nimbus) "-" (current-time-secs))
-                 storm-conf (normalize-conf
-                              conf
-                              (-> topo-conf
-                                (assoc STORM-ID storm-id)
-                                (assoc TOPOLOGY-NAME storm-name))
-                              topology)
-                 total-storm-conf (merge conf storm-conf)
-                 ; commented out until I find a good way to do it
-                 topology (normalize-topology! total-storm-conf topology)
-                 storm-cluster-state (:storm-cluster-state nimbus)]
-             (system-topology! total-storm-conf topology) ;; this validates the structure of the topology
-             (log-message "Received topology submission for " storm-name " with conf " storm-conf)
-             ;; lock protects against multiple topologies being submitted at once and
-             ;; cleanup thread killing topology in b/w assignment and starting the topology
-             (locking (:submit-lock nimbus)
-               ;; this is a map from Thrift status names to keyword statuses
-               (let [thrift-status->kw-status {SubmitOptions$TopologyInitialStatus/INACTIVE :inactive
-                                               SubmitOptions$TopologyInitialStatus/ACTIVE :active}
-                     _ (start-storm nimbus topology total-storm-conf storm-name storm-id (thrift-status->kw-status (.getInitialStatus submitOptions)))
-                     assignment (mk-assignments nimbus topology storm-id total-storm-conf)
-                     executors (keys (:executor->worker-uuid assignment ))]
-                 (worker/mk-worker conf total-storm-conf storm-id topology executors))))
-           (catch Throwable e
-                            (log-warn-error e "Topology submission exception. (topology name='" storm-name "')")
-                            (throw e)))))
-
-      (^void submitTopology
-       [this ^String storm-name ^Map serializedConf ^StormTopology topology]
-       (.submitTopologyWithOpts this storm-name serializedConf topology
-                                     (SubmitOptions. SubmitOptions$TopologyInitialStatus/ACTIVE)))
+            (validate-topology-name! storm-name)
+            (try
+              (validate-configs-with-schemas topo-conf)
+              (catch IllegalArgumentException ex
+                (throw (InvalidTopologyException. (.getMessage ex)))))
+            (.validate ^backtype.storm.nimbus.ITopologyValidator (:validator nimbus)
+              storm-name
+              topo-conf
+              topology)
+            (swap! (:submitted-count nimbus) inc)
+            ; here we create a "unique" storm-id, set it up and start it, also makes assignments
+            (let [storm-id (str storm-name "-" @(:submitted-count nimbus) "-" (current-time-secs))
+                  storm-conf (normalize-conf
+                               conf
+                               (-> topo-conf
+                                 (assoc STORM-ID storm-id)
+                                 (assoc TOPOLOGY-NAME storm-name))
+                               topology)
+                  total-storm-conf (merge conf storm-conf)
+                  topology (normalize-topology! total-storm-conf topology)]
+              (system-topology! total-storm-conf topology) ;; this validates the structure of the topology
+              (log-message "Received topology submission for " storm-name " with conf " storm-conf)
+              (let [assignment (mk-assignments nimbus topology storm-id total-storm-conf)
+                    executors (keys (:executor->worker-uuid assignment))
+                    worker (worker/mk-worker conf total-storm-conf storm-id topology executors)]
+                (swap! workers conj worker)))
+            (catch Throwable e
+              (log-warn-error e "Topology submission exception. (topology name='" storm-name "')")
+              (throw e)))))
 
       (^void killTopology [this ^String name]
-       (.killTopologyWithOpts this name (KillOptions.)))
+        (.killTopologyWithOpts this name))
 
-      (^void killTopologyWithOpts [this ^String storm-name ^KillOptions options]
-        (check-storm-active! nimbus storm-name true)
-        (let [wait-amt (.getWaitSecs options)]
-          ;; (transition-name! nimbus storm-name [:kill wait-amt] true)
-          ))
-
-      (getNimbusConf [this]
+      (^Map getNimbusConf [this]
         (:conf nimbus))
 
       Shutdownable
       (shutdown [this]
-        (log-message "Shutting down master")
-        (cancel-timer (:timer nimbus))
-        (log-message "Shut down master")
-        )
+        (shutdown*))
+
       DaemonCommon
       (waiting? [this]
         (timer-waiting? (:timer nimbus))))))
