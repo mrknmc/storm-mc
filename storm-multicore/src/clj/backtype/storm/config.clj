@@ -209,7 +209,10 @@
 (defn resources-path
   "Retrieves the path to resources on the current Thread."
   []
-  (.getPath (.getResource (.getContextClassLoader (Thread/currentThread)) RESOURCES-SUBDIR)))
+  (try
+    (.getPath (.getResource (.getContextClassLoader (Thread/currentThread)) RESOURCES-SUBDIR))
+    (catch NullPointerException t
+      "tmp/test")))
 
 
 (defn read-supervisor-storm-conf
