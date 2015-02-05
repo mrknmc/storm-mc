@@ -39,6 +39,7 @@
     <modules>
         <module>storm-buildtools/maven-shade-clojure-transformer</module>
         <module>storm-multicore</module>
+        <module>examples/storm-starter</module>
     </modules>
 
     <properties>
