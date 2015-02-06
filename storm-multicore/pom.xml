@@ -18,9 +18,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <artifactId>storm</artifactId>
-        <groupId>org.apache.storm</groupId>
-        <version>0.9.2-incubating</version>
+        <artifactId>storm-mc</artifactId>
+        <groupId>com.mrknmc.storm-mc</groupId>
+        <version>0.1.0</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>storm-multicore</artifactId>
     <packaging>jar</packaging>
@@ -204,7 +205,7 @@
                     <minimizeJar>false</minimizeJar>
                     <artifactSet>
                         <includes>
-                            <include>org.apache.storm:*</include>
+                            <include>com.mrknmc.storm-mc:*</include>
                         </includes>
                     </artifactSet>
                     <transformers>
@@ -213,7 +214,7 @@
                 </configuration>
                 <dependencies>
                     <dependency>
-                        <groupId>org.apache.storm</groupId>
+                        <groupId>com.mrknmc.storm-mc</groupId>
                         <artifactId>maven-shade-clojure-transformer</artifactId>
                         <version>${project.version}</version>
                     </dependency>
