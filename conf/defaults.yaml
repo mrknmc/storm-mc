@@ -94,7 +94,7 @@ supervisor.enable: true
 worker.childopts: "-Xmx768m"
 worker.heartbeat.frequency.secs: 1
 
-# control how many worker receiver threads we need per worker 
+# control how many worker receiver threads we need per worker
 topology.worker.receiver.thread.count: 1
 
 task.heartbeat.frequency.secs: 3
@@ -120,7 +120,7 @@ storm.messaging.netty.flush.check.interval.ms: 10
 
 ### topology.* configs are for specific executing storms
 topology.enable.message.timeouts: true
-topology.debug: true
+topology.debug: false
 topology.workers: 1
 topology.acker.executors: null
 topology.tasks: null

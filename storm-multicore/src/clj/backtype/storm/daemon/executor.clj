@@ -408,7 +408,6 @@
                                                                                      task-id
                                                                                      out-stream-id
                                                                                      tuple-id)]
-                                                           (log-message out-tuple)
                                                            (transfer-fn out-task
                                                                         out-tuple
                                                                         overflow-buffer)
