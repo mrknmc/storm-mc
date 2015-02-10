@@ -81,7 +81,7 @@ class JvmtiScopedPtr {
 
   ~JvmtiScopedPtr() {
     if (NULL != ref_) {
-      JVMTI_ERROR(jvmti_->Deallocate((unsigned char *)ref_));
+      JVMTI_ERROR(jvmti_->Deallocate(reinterpret_cast<unsigned char *>(ref_)));
     }
   }
 

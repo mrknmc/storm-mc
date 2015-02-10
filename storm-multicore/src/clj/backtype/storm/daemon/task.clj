@@ -17,6 +17,7 @@
   (:use [backtype.storm.daemon common])
   (:use [backtype.storm util config log])
   (:import [java.util Collection List ArrayList])
+  (:import [org.apache.commons.lang.SerializationUtils])
   (:import [backtype.storm.hooks ITaskHook])
   (:import [backtype.storm.tuple Tuple TupleImpl])
   (:import [backtype.storm.utils Utils])
@@ -76,7 +77,7 @@
               ;; create copies otherwise it would be one component forking processes
               (instance? ShellSpout obj) (ShellSpout. obj)
               (instance? ShellBolt obj) (ShellBolt. obj)
-              true obj)]
+              true (SerializationUtils/clone obj))]
 ;        obj (if (instance? JavaObject obj)
 ;              (thrift/instantiate-java-object obj)
 ;              obj )]
