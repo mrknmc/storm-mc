@@ -260,10 +260,10 @@
    ; by default this is DefaultTopologyValidator
    :validator (new-instance (conf NIMBUS-TOPOLOGY-VALIDATOR))
    ; not sure if we need a timer.
-   :timer (mk-timer :kill-fn (fn [t]
-                               (log-error t "Error when processing event")
-                               (halt-process! 20 "Error when processing an event")
-                               ))
+;   :timer (mk-timer :kill-fn (fn [t]
+;                               (log-error t "Error when processing event")
+;                               (halt-process! 20 "Error when processing an event")
+;                               ))
    :scheduler (mk-scheduler conf inimbus)})
 
 
@@ -328,7 +328,7 @@
 
       DaemonCommon
       (waiting? [this]
-        (timer-waiting? (:timer nimbus))))))
+        ))))
 
 
 (defn standalone-nimbus []
