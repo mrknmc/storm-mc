@@ -276,7 +276,7 @@
         workers (atom [])
         shutdown* (fn []
                     (log-message "Shutting down master")
-                    (cancel-timer (:timer nimbus))
+                    ;; (cancel-timer (:timer nimbus))
                     (doseq [worker @workers] (.shutdown worker))
                     (log-message "Shut down master"))]
     ; prepare the validator
