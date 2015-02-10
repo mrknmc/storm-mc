@@ -4,6 +4,9 @@
 apt-get update
 apt-get install -y openjdk-7-jdk maven tmux git vim tree
 
+# Required for profiling tools
+apt-get install -y subversion make g++
+
 # Install Leiningen
 wget https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein
 chmod a+x lein
