@@ -214,7 +214,7 @@
                 </configuration>
                 <dependencies>
                     <dependency>
-                        <groupId>com.mrknmc.storm-mc</groupId>
+                        <groupId>org.apache.storm</groupId>
                         <artifactId>maven-shade-clojure-transformer</artifactId>
                         <version>${project.version}</version>
                     </dependency>
