@@ -45,7 +45,7 @@ public class Grouping implements java.io.Serializable {
   }
 
   public Grouping(GroupingType type, CustomStreamGrouping customGrouping, List<String> fields) {
-    this.type = GroupingType.FIELDS;
+    this.type = type;
     this.customGrouping = customGrouping;
     this.fields = fields;
   }
