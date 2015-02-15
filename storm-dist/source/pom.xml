@@ -21,7 +21,7 @@
     <parent>
         <artifactId>storm-mc</artifactId>
         <groupId>com.mrknmc.storm-mc.</groupId>
-        <version>0.1.0</version>
+        <version>0.1.1</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
     <artifactId>storm-mc-source</artifactId>
