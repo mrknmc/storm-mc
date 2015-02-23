@@ -4,11 +4,11 @@ VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
-  config.hostmanager.manage_host = true
-  config.hostmanager.enabled = true
-  config.vm.synced_folder "~/storm-mc", "/opt/storm-mc"
-  config.vm.synced_folder "~/storm", "/opt/storm"
+  config.vm.synced_folder "~/storm-mc", "/home/vagrant/storm-mc"
+  config.vm.synced_folder "~/storm", "/home/vagrant/storm"
   config.vm.provision "file", source: "~/.gitconfig", destination: ".gitconfig"
+
+  # config.ssh.private_key_path = '~/.ssh/id_rsa'
 
   config.vm.define "storm" do |storm|
     storm.vm.box = "hashicorp/precise64"
