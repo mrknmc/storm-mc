@@ -35,56 +35,7 @@
   (:require [backtype.storm.disruptor :as disruptor])
   (:require [backtype.storm.tuple :as tuple])
   (:require [backtype.storm.daemon.task :as task]))
-;
-;
-;(defmulti mk-executor-stats executor-selector)
-;
-;
-;(defn throttled-report-error-fn [executor]
-;  (let [storm-conf (:storm-conf executor)
-;        error-interval-secs (storm-conf TOPOLOGY-ERROR-THROTTLE-INTERVAL-SECS)
-;        max-per-interval (storm-conf TOPOLOGY-MAX-ERROR-REPORT-PER-INTERVAL)
-;        interval-start-time (atom (current-time-secs))
-;        interval-errors (atom 0)
-;        ]
-;    (fn [error]
-;      (log-error error)
-;      (when (> (time-delta @interval-start-time)
-;               error-interval-secs)
-;        (reset! interval-errors 0)
-;        (reset! interval-start-time (current-time-secs)))
-;      (swap! interval-errors inc)
-;
-;      (when (<= @interval-errors max-per-interval)
-;        (cluster/report-error (:storm-cluster-state executor) (:storm-id executor) (:component-id executor) error)
-;        ))))
-;
-;
-;
-;(defn setup-metrics! [executor-data]
-;  (let [{:keys [storm-conf receive-queue worker-context interval->task->metric-registry]} executor-data
-;        distinct-time-bucket-intervals (keys interval->task->metric-registry)]
-;    (doseq [interval distinct-time-bucket-intervals]
-;      (schedule-recurring
-;       (:user-timer (:worker executor-data))
-;       interval
-;       interval
-;       (fn []
-;         (disruptor/publish
-;          receive-queue
-;          [[nil (TupleImpl. worker-context [interval] Constants/SYSTEM_TASK_ID Constants/METRICS_TICK_STREAM_ID)]]))))))
-;
-;
-;
-;;; TODO: refactor this to be part of an executor-specific map
-;(defmethod mk-executor-stats :spout [_ rate]
-;  (stats/mk-spout-stats rate))
-;
-;(defmethod mk-executor-stats :bolt [_ rate]
-;  (stats/mk-bolt-stats rate))
 
-
-;; Stuff below here should be ok
 
 (defn executor-selector [executor-data & _] (:type executor-data))
 

@@ -33,7 +33,7 @@
   (:use [backtype.storm.scheduler.DefaultScheduler])
   (:import [backtype.storm.scheduler INimbus SupervisorDetails WorkerSlot Topologies TopologyDetails ExecutorDetails
             Cluster SchedulerAssignment SchedulerAssignmentImpl DefaultScheduler])
-  (:use [backtype.storm util timer log config])
+  (:use [backtype.storm util log config])
   (:use [backtype.storm.daemon common])
   (:gen-class
     :methods [^{:static true} [launch [backtype.storm.scheduler.INimbus] void]]))

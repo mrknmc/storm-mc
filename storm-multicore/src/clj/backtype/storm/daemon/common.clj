@@ -19,208 +19,9 @@
             GlobalStreamId Grouping Grouping$GroupingType])
   (:import [backtype.storm.utils Utils])
   (:import [backtype.storm.task WorkerTopologyContext])
-;  (:import [backtype.storm Constants])
-;  (:import [backtype.storm.metric SystemBolt])
-  (:require [clojure.set :as set])  
-;  (:require [backtype.storm.daemon.acker :as acker])
-;  (:require [backtype.storm.thrift :as thrift])
+  (:require [clojure.set :as set])
   )
 
-
-;(def ACKER-COMPONENT-ID acker/ACKER-COMPONENT-ID)
-;(def ACKER-INIT-STREAM-ID acker/ACKER-INIT-STREAM-ID)
-;(def ACKER-ACK-STREAM-ID acker/ACKER-ACK-STREAM-ID)
-;(def ACKER-FAIL-STREAM-ID acker/ACKER-FAIL-STREAM-ID)
-;
-;(def SYSTEM-STREAM-ID "__system")
-;
-;(def SYSTEM-COMPONENT-ID Constants/SYSTEM_COMPONENT_ID)
-;(def SYSTEM-TICK-STREAM-ID Constants/SYSTEM_TICK_STREAM_ID)
-;(def METRICS-STREAM-ID Constants/METRICS_STREAM_ID)
-;(def METRICS-TICK-STREAM-ID Constants/METRICS_TICK_STREAM_ID)
-;
-;
-;
-;
-;(defrecord SupervisorInfo [time-secs hostname assignment-id used-ports meta scheduler-meta uptime-secs])
-;
-;(def LS-WORKER-HEARTBEAT "worker-heartbeat")
-;
-;;; LocalState constants
-;(def LS-ID "supervisor-id")
-;(def LS-LOCAL-ASSIGNMENTS "local-assignments")
-;(def LS-APPROVED-WORKERS "approved-workers")
-;
-;
-;
-;(defrecord WorkerHeartbeat [time-secs storm-id executors port])
-;
-;(defrecord ExecutorStats [^long processed
-;                          ^long acked
-;                          ^long emitted
-;                          ^long transferred
-;                          ^long failed])
-;
-;(defn new-executor-stats []
-;  (ExecutorStats. 0 0 0 0 0))
-;
-;
-;(defn topology-bases [storm-cluster-state]
-;  (let [active-topologies (.active-storms storm-cluster-state)]
-;    (into {}
-;          (dofor [id active-topologies]
-;                 [id (.storm-base storm-cluster-state id nil)]
-;                 ))
-;    ))
-;
-;(defn validate-distributed-mode! [conf]
-;  (if (local-mode? conf)
-;      (throw
-;        (IllegalArgumentException. "Cannot start server in local mode!"))))
-;
-;
-;
-;(defn acker-inputs [^StormTopology topology]
-;  (let [bolt-ids (.. topology get_bolts keySet)
-;        spout-ids (.. topology get_spouts keySet)
-;        spout-inputs (apply merge
-;                            (for [id spout-ids]
-;                              {[id ACKER-INIT-STREAM-ID] ["id"]}
-;                              ))
-;        bolt-inputs (apply merge
-;                           (for [id bolt-ids]
-;                             {[id ACKER-ACK-STREAM-ID] ["id"]
-;                              [id ACKER-FAIL-STREAM-ID] ["id"]}
-;                             ))]
-;    (merge spout-inputs bolt-inputs)))
-;
-;(defn add-acker! [storm-conf ^StormTopology ret]
-;  (let [num-executors (if (nil? (storm-conf TOPOLOGY-ACKER-EXECUTORS)) (storm-conf TOPOLOGY-WORKERS) (storm-conf TOPOLOGY-ACKER-EXECUTORS))
-;        acker-bolt (thrift/mk-bolt-spec* (acker-inputs ret)
-;                                         (new backtype.storm.daemon.acker)
-;                                         {ACKER-ACK-STREAM-ID (thrift/direct-output-fields ["id"])
-;                                          ACKER-FAIL-STREAM-ID (thrift/direct-output-fields ["id"])
-;                                          }
-;                                         :p num-executors
-;                                         :conf {TOPOLOGY-TASKS num-executors
-;                                                TOPOLOGY-TICK-TUPLE-FREQ-SECS (storm-conf TOPOLOGY-MESSAGE-TIMEOUT-SECS)})]
-;    (dofor [[_ bolt] (.get_bolts ret)
-;            :let [common (.get_common bolt)]]
-;           (do
-;             (.put_to_streams common ACKER-ACK-STREAM-ID (thrift/output-fields ["id" "ack-val"]))
-;             (.put_to_streams common ACKER-FAIL-STREAM-ID (thrift/output-fields ["id"]))
-;             ))
-;    (dofor [[_ spout] (.get_spouts ret)
-;            :let [common (.get_common spout)
-;                  spout-conf (merge
-;                               (component-conf spout)
-;                               {TOPOLOGY-TICK-TUPLE-FREQ-SECS (storm-conf TOPOLOGY-MESSAGE-TIMEOUT-SECS)})]]
-;      (do
-;        ;; this set up tick tuples to cause timeouts to be triggered
-;        (.set_json_conf common (to-json spout-conf))
-;        (.put_to_streams common ACKER-INIT-STREAM-ID (thrift/output-fields ["id" "init-val" "spout-task"]))
-;        (.put_to_inputs common
-;                        (GlobalStreamId. ACKER-COMPONENT-ID ACKER-ACK-STREAM-ID)
-;                        (thrift/mk-direct-grouping))
-;        (.put_to_inputs common
-;                        (GlobalStreamId. ACKER-COMPONENT-ID ACKER-FAIL-STREAM-ID)
-;                        (thrift/mk-direct-grouping))
-;        ))
-;    (.put_to_bolts ret "__acker" acker-bolt)
-;    ))
-;
-;(defn add-metric-streams! [^StormTopology topology]
-;  (doseq [[_ component] (all-components topology)
-;          :let [common (.get_common component)]]
-;    (.put_to_streams common METRICS-STREAM-ID
-;                     (thrift/output-fields ["task-info" "data-points"]))))
-;
-;(defn add-system-streams! [^StormTopology topology]
-;  (doseq [[_ component] (all-components topology)
-;          :let [common (.get_common component)]]
-;    (.put_to_streams common SYSTEM-STREAM-ID (thrift/output-fields ["event"]))))
-;
-;
-;(defn map-occurrences [afn coll]
-;  (->> coll
-;       (reduce (fn [[counts new-coll] x]
-;                 (let [occurs (inc (get counts x 0))]
-;                   [(assoc counts x occurs) (cons (afn x occurs) new-coll)]))
-;               [{} []])
-;       (second)
-;       (reverse)))
-;
-;(defn number-duplicates
-;  "(number-duplicates [\"a\", \"b\", \"a\"]) => [\"a\", \"b\", \"a#2\"]"
-;  [coll]
-;  (map-occurrences (fn [x occurences] (if (>= occurences 2) (str x "#" occurences) x)) coll))
-;
-;(defn metrics-consumer-register-ids
-;  "Generates a list of component ids for each metrics consumer
-;   e.g. [\"__metrics_org.mycompany.MyMetricsConsumer\", ..] "
-;  [storm-conf]
-;  (->> (get storm-conf TOPOLOGY-METRICS-CONSUMER-REGISTER)
-;       (map #(get % "class"))
-;       (number-duplicates)
-;       (map #(str Constants/METRICS_COMPONENT_ID_PREFIX %))))
-;
-;(defn metrics-consumer-bolt-specs [storm-conf topology]
-;  (let [component-ids-that-emit-metrics (cons SYSTEM-COMPONENT-ID (keys (all-components topology)))
-;        inputs (->> (for [comp-id component-ids-that-emit-metrics]
-;                      {[comp-id METRICS-STREAM-ID] :shuffle})
-;                    (into {}))
-;
-;        mk-bolt-spec (fn [class arg p]
-;                       (thrift/mk-bolt-spec*
-;                        inputs
-;                        (backtype.storm.metric.MetricsConsumerBolt. class arg)
-;                        {} :p p :conf {TOPOLOGY-TASKS p}))]
-;
-;    (map
-;     (fn [component-id register]
-;       [component-id (mk-bolt-spec (get register "class")
-;                                   (get register "argument")
-;                                   (or (get register "parallelism.hint") 1))])
-;
-;     (metrics-consumer-register-ids storm-conf)
-;     (get storm-conf TOPOLOGY-METRICS-CONSUMER-REGISTER))))
-;
-;(defn add-metric-components! [storm-conf ^StormTopology topology]
-;  (doseq [[comp-id bolt-spec] (metrics-consumer-bolt-specs storm-conf topology)]
-;    (.put_to_bolts topology comp-id bolt-spec)))
-;
-;(defn add-system-components! [conf ^StormTopology topology]
-;  (let [system-bolt-spec (thrift/mk-bolt-spec*
-;                          {}
-;                          (SystemBolt.)
-;                          {SYSTEM-TICK-STREAM-ID (thrift/output-fields ["rate_secs"])
-;                           METRICS-TICK-STREAM-ID (thrift/output-fields ["interval"])}
-;                          :p 0
-;                          :conf {TOPOLOGY-TASKS 0})]
-;    (.put_to_bolts topology SYSTEM-COMPONENT-ID system-bolt-spec)))
-;
-;
-;(defn has-ackers? [storm-conf]
-;  (or (nil? (storm-conf TOPOLOGY-ACKER-EXECUTORS)) (> (storm-conf TOPOLOGY-ACKER-EXECUTORS) 0)))
-;
-;
-;
-;
-;
-;
-;(defn to-task->node+port [executor->node+port]
-;  (->> executor->node+port
-;       (mapcat (fn [[e node+port]] (for [t (executor-id->tasks e)] [t node+port])))
-;       (into {})))
-
-
-; Stuff below here should be ok
-
-
-;;; the task id is the virtual port
-;;; node->host is here so that tasks know who to talk to just from assignment
-;;; this avoid situation where node goes down and task doesn't know what to do information-wise
-;(defrecord Assignment [master-code-dir node->host executor->node+port executor->start-time-secs])
 
 (def SYSTEM-STREAM-ID "__system")
 
@@ -256,11 +57,7 @@
     (:component->sorted-tasks worker)
     (:component->stream->fields worker)
     (:storm-id worker)
-    ;; TODO: this is where *.py and *.rb files are looked for
-    ;; should be multilang, is distributed stuff right now
     (resources-path)
-;    (supervisor-storm-resources-path
-;      (supervisor-stormdist-root (:conf worker) (:storm-id worker)))
     (worker-pids-root (:conf worker) (:worker-id worker))
     (int 0)
     (:task-ids worker)
@@ -303,7 +100,6 @@
    Grouping$GroupingType/SHUFFLE :shuffle
    Grouping$GroupingType/ALL :all
    Grouping$GroupingType/NONE :none
-   ;   Grouping$GroupingType/CUSTOM_SERIALIZED :custom-serialized
    Grouping$GroupingType/CUSTOM_OBJECT :custom-object
    Grouping$GroupingType/DIRECT :direct
    Grouping$GroupingType/LOCAL_OR_SHUFFLE :local-or-shuffle})
@@ -363,7 +159,6 @@
   [^StormTopology topology]
   ; make separate sets of bolts and spouts
   (let [sets [(.getBolts topology) (.getSpouts topology)]
-;  (let [sets (map #(.getFieldValue topology %) thrift/STORM-TOPOLOGY-FIELDS)
         ; see if any of components is in both sets
         offending (apply any-intersection sets)]
     (if-not (empty? offending)
@@ -380,17 +175,6 @@
         (if (system-id? stream-key)
           (throw (InvalidTopologyException.
                    (str stream-key " is not a valid stream id"))))))
-;    (doseq [f thrift/STORM-TOPOLOGY-FIELDS
-;            :let [obj-map (.getFieldValue topology f)]]
-;      (doseq [id (keys obj-map)]
-;        (if (system-id? id)
-;          (throw (InvalidTopologyException.
-;                   (str id " is not a valid component id")))))
-;      (doseq [obj (vals obj-map)
-;              id (-> obj .get_common .get_streams keys)]
-;        (if (system-id? id)
-;          (throw (InvalidTopologyException.
-;                   (str id " is not a valid stream id"))))))
     ))
 
 
@@ -433,15 +217,6 @@
   [storm-conf ^StormTopology topology]
   (validate-basic! topology)
   topology)
-;  (let [ret (.deepCopy topology)]
-    ; we do not need ackers, but see if there is anything vital there
-;    (add-acker! storm-conf ret)
-    ; add the rest if vital
-;    (add-metric-components! storm-conf ret)
-;    (add-system-components! storm-conf ret)
-;    (add-metric-streams! ret)
-;    (add-system-streams! ret)
-;    (validate-structure! ret)
 
 
 (defn storm-task-info

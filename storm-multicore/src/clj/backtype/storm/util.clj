@@ -19,7 +19,7 @@
   (:import [java.util Map Map$Entry List ArrayList Collection Iterator HashMap])
   (:import [java.io FileReader FileNotFoundException])
   (:import [backtype.storm Config])
-  (:import [backtype.storm.utils Time Container ClojureTimerTask Utils
+  (:import [backtype.storm.utils Time Container Utils
             MutableObject MutableInt])
   (:import [java.util UUID Random ArrayList List Collections])
   (:import [java.util.zip ZipFile])
