@@ -113,7 +113,8 @@
     storm-id
     storm-conf
     topology
-    (storm-conf TOPOLOGY-WORKERS)
+    ;; TODO: below is number of workers, get rid of details eventually
+    1
     executor->component))
 
 

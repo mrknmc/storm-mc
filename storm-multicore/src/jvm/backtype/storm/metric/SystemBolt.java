@@ -89,9 +89,6 @@ public class SystemBolt implements IBolt {
 
     @Override
     public void prepare(final Map stormConf, TopologyContext context, OutputCollector collector) {
-        if(_prepareWasCalled && !"local".equals(stormConf.get(Config.STORM_CLUSTER_MODE))) {
-            throw new RuntimeException("A single worker should have 1 SystemBolt instance.");
-        }
         _prepareWasCalled = true;
 
         int bucketSize = RT.intCast(stormConf.get(Config.TOPOLOGY_BUILTIN_METRICS_BUCKET_SIZE_SECS));
