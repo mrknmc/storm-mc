@@ -26,10 +26,6 @@
 (def SYSTEM-STREAM-ID "__system")
 
 
-(defn has-ackers? [storm-conf]
-  (or (nil? (storm-conf TOPOLOGY-ACKER-EXECUTORS)) (> (storm-conf TOPOLOGY-ACKER-EXECUTORS) 0)))
-
-
 (defrecord Assignment [executor->worker-uuid executor->start-time-secs])
 
 
@@ -226,7 +222,6 @@
     ;; get all components
     all-components
     ;; make a map of id -> num-tasks
-    ;; TODO: I think TOPOLOGY-TASKS is causing a nullpointer exception here
     (map-val (comp #(get % TOPOLOGY-TASKS) component-conf))
     ;; sorts by the key (id of the component)
     (sort-by first)

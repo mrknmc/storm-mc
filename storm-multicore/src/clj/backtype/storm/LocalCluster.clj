@@ -28,10 +28,7 @@
 (defnk mk-local-cluster
   "Reads the daemon config, creates a nimbus thread."
   [:daemon-conf {} :inimbus nil]
-  (let [daemon-conf (merge (read-storm-config)
-                      {TOPOLOGY-ENABLE-MESSAGE-TIMEOUTS false
-                       TOPOLOGY-TRIDENT-BATCH-EMIT-INTERVAL-MILLIS 50}
-                      daemon-conf)
+  (let [daemon-conf (merge (read-storm-config) daemon-conf)
         nimbus (nimbus/service-handler
                  daemon-conf
                  (if inimbus inimbus (nimbus/standalone-nimbus)))
@@ -43,9 +40,7 @@
 
 (defn -init
   ([]
-   (let [ret (mk-local-cluster
-               :daemon-conf
-               {TOPOLOGY-ENABLE-MESSAGE-TIMEOUTS true})]
+   (let [ret (mk-local-cluster)]
      [[] ret]))
   ([^Map stateMap]
    [[] stateMap]))

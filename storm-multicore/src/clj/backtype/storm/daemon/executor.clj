@@ -243,8 +243,6 @@
                         TOPOLOGY-DEBUG
                         TOPOLOGY-MAX-SPOUT-PENDING
                         TOPOLOGY-MAX-TASK-PARALLELISM
-                        TOPOLOGY-TRANSACTIONAL-ID
-                        TOPOLOGY-TICK-TUPLE-FREQ-SECS
                         TOPOLOGY-SLEEP-SPOUT-WAIT-STRATEGY-TIME-MS
                         TOPOLOGY-SPOUT-WAIT-STRATEGY
                         )
@@ -318,7 +316,6 @@
                                 ))))
         receive-queue (:receive-queue executor-data)
         event-handler (mk-task-receiver executor-data tuple-action-fn)
-        has-ackers? (has-ackers? storm-conf)
         emitted-count (MutableLong. 0)
         empty-emit-streak (MutableLong. 0)
 
@@ -346,14 +343,9 @@
                                        (.increment emitted-count)
                                        (let [out-tasks (if out-task-id
                                                          (tasks-fn out-task-id out-stream-id values)
-                                                         (tasks-fn out-stream-id values))
-                                             rooted? (and message-id has-ackers?)
-                                             root-id (if rooted? (MessageId/generateId rand))
-                                             out-ids (fast-list-for [t out-tasks] (if rooted? (MessageId/generateId rand)))]
-                                         (fast-list-iter [out-task out-tasks id out-ids]
-                                                         (let [tuple-id (if rooted?
-                                                                          (MessageId/makeRootId root-id id)
-                                                                          (MessageId/makeUnanchored))
+                                                         (tasks-fn out-stream-id values))]
+                                         (fast-list-iter [out-task out-tasks]
+                                                         (let [tuple-id (MessageId/makeUnanchored)
                                                                out-tuple (TupleImpl. worker-context
                                                                                      values
                                                                                      task-id
@@ -363,21 +355,6 @@
                                                                         out-tuple
                                                                         overflow-buffer)
                                                            ))
-                                         ;; TODO: never should be rooted
-;                                         (if rooted?
-;                                           (do
-;                                             (.put pending root-id [task-id
-;                                                                    message-id
-;                                                                    {:stream out-stream-id :values values}
-;                                                                    (if (sampler) (System/currentTimeMillis))])
-;                                             (task/send-unanchored task-data
-;                                                                   ACKER-INIT-STREAM-ID
-;                                                                   [root-id (bit-xor-vals out-ids) task-id]
-;                                                                   overflow-buffer))
-;                                           (when message-id
-;                                             (ack-spout-msg executor-data task-data message-id
-;                                                            {:stream out-stream-id :values values}
-;                                                            (if (sampler) 0))))
                                          (or out-tasks [])
                                          ))]]
 ;          (builtin-metrics/register-all (:builtin-metrics task-data) storm-conf (:user-context task-data))

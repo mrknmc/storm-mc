@@ -68,18 +68,6 @@
                            (.get nil)))]))
        (into {})))
 
-(defn cluster-mode
-  [conf & args]
-  (keyword (conf STORM-CLUSTER-MODE)))
-
-(defn local-mode?
-  [conf]
-  (let [mode (conf STORM-CLUSTER-MODE)]
-    (condp = mode
-      "local" true
-      "distributed" false
-      (throw (IllegalArgumentException.
-               (str "Illegal cluster mode in conf: " mode))))))
 
 (defn sampling-rate
   [conf]
