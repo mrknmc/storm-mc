@@ -57,6 +57,7 @@
         <snakeyaml.version>1.11</snakeyaml.version>
         <clojure.tools.cli.version>0.2.4</clojure.tools.cli.version>
         <disruptor.version>2.10.1</disruptor.version>
+        <clojure.math.numeric-tower.version>0.0.1</clojure.math.numeric-tower.version>
         <guava.version>13.0</guava.version>
         <logback-classic.version>1.0.13</logback-classic.version>
         <log4j-over-slf4j.version>1.6.6</log4j-over-slf4j.version>
@@ -115,6 +116,11 @@
                 <groupId>org.clojure</groupId>
                 <artifactId>tools.cli</artifactId>
                 <version>${clojure.tools.cli.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>org.clojure</groupId>
+              <artifactId>math.numeric-tower</artifactId>
+              <version>${clojure.math.numeric-tower.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.googlecode.disruptor</groupId>

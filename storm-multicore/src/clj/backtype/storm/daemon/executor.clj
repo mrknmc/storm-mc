@@ -31,7 +31,8 @@
             EmitInfo BoltFailInfo BoltAckInfo BoltExecuteInfo])
   (:import [backtype.storm.metric.api IMetric IMetricsConsumer$TaskInfo IMetricsConsumer$DataPoint StateMetric])
   (:require [clojure.set :as set])
-  (:require [backtype.storm.cluster :as cluster])
+  (:require [backtype.storm.stats :as stats])
+;  (:require [backtype.storm.cluster :as cluster])
   (:require [backtype.storm.disruptor :as disruptor])
   (:require [backtype.storm.tuple :as tuple])
   (:require [backtype.storm.daemon.task :as task]))
@@ -40,6 +41,7 @@
 (defn executor-selector [executor-data & _] (:type executor-data))
 
 (defmulti close-component executor-selector)
+(defmulti mk-executor-stats executor-selector)
 (defmulti mk-threads executor-selector)
 
 
@@ -428,7 +430,7 @@
 
 (defmethod mk-threads :bolt [executor-data task-datas]
   (let [execute-sampler (mk-stats-sampler (:storm-conf executor-data))
-;        executor-stats (:stats executor-data)
+        executor-stats (:stats executor-data)
 ;        {:keys [storm-conf component-id worker-context transfer-fn report-error sampler
 ;                open-or-prepare-was-called?]} executor-data
 
@@ -611,10 +613,10 @@
      :storm-active-atom (:storm-active-atom worker)
      :transfer-fn (mk-executor-transfer-fn worker)
      :suicide-fn (:suicide-fn worker)
-     :storm-cluster-state (cluster/mk-storm-cluster-state (:cluster-state worker))
+;     :storm-cluster-state (cluster/mk-storm-cluster-state (:cluster-state worker))
      :type executor-type
      ;; TODO: should refactor this to be part of the executor specific map (spout or bolt with :common field)
-;     :stats (mk-executor-stats <> (sampling-rate storm-conf))
+     :stats (mk-executor-stats <> (sampling-rate storm-conf))
 ;     :interval->task->metric-registry (HashMap.)
      :task->component (:task->component worker)
      :stream->component->grouper (outbound-components worker-context component-id)
@@ -651,8 +653,7 @@
     (reify
       RunningExecutor
       (render-stats [this]
-        )
-;        (stats/render-stats! (:stats executor-data)))
+        (stats/render-stats! (:stats executor-data)))
       (get-executor-id [this]
         executor-id )
       Shutdownable
@@ -673,3 +674,11 @@
             (close-component executor-data obj)))
         (log-message "Shut down executor " component-id ":" (pr-str executor-id)))
         )))
+
+
+(defmethod mk-executor-stats :spout [_ rate]
+  (stats/mk-spout-stats rate))
+
+
+(defmethod mk-executor-stats :bolt [_ rate]
+  (stats/mk-bolt-stats rate))

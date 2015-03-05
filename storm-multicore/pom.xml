@@ -39,6 +39,10 @@
             <artifactId>clj-time</artifactId>
         </dependency>
         <dependency>
+          <groupId>org.clojure</groupId>
+          <artifactId>math.numeric-tower</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>tools.logging</artifactId>
         </dependency>
