@@ -431,10 +431,7 @@
 (defmethod mk-threads :bolt [executor-data task-datas]
   (let [execute-sampler (mk-stats-sampler (:storm-conf executor-data))
         executor-stats (:stats executor-data)
-;        {:keys [storm-conf component-id worker-context transfer-fn report-error sampler
-;                open-or-prepare-was-called?]} executor-data
-
-        {:keys [storm-conf component-id worker-context transfer-fn open-or-prepare-was-called?]} executor-data
+        {:keys [storm-conf component-id worker-context transfer-fn report-error open-or-prepare-was-called?]} executor-data
         rand (Random. (Utils/secureRandomLong))
         tuple-action-fn (fn [task-id ^TupleImpl tuple]
                           ;; synchronization needs to be done with a key provided by this bolt, otherwise:
@@ -573,8 +570,7 @@
 ;                                                       (.getSourceStreamId tuple)
 ;                                                       delta))))
                        (reportError [this error]
-                         )
-;                         (report-error error)
+                         (report-error error))
                          ))))
         (reset! open-or-prepare-was-called? true)
         (log-message "Prepared bolt " component-id ":" (keys task-datas))
@@ -617,7 +613,7 @@
      :type executor-type
      ;; TODO: should refactor this to be part of the executor specific map (spout or bolt with :common field)
      :stats (mk-executor-stats <> (sampling-rate storm-conf))
-;     :interval->task->metric-registry (HashMap.)
+     :interval->task->metric-registry (HashMap.)
      :task->component (:task->component worker)
      :stream->component->grouper (outbound-components worker-context component-id)
      :report-error (throttled-report-error-fn <>)
