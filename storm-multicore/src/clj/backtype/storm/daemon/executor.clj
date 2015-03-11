@@ -463,19 +463,19 @@
 ;                                  (.setProcessSampleStartTime tuple now))
 ;                                (when execute-sampler?
 ;                                  (.setExecuteSampleStartTime tuple now))
-                                (.execute bolt-obj tuple)))))]
-;                                (let [delta (tuple-execute-time-delta! tuple)]
+                                (.execute bolt-obj tuple)
+                                (let [delta (tuple-execute-time-delta! tuple)]
 ;                                  (task/apply-hooks user-context .boltExecute (BoltExecuteInfo. tuple task-id delta))
-;                                  (when delta
+                                  (when delta
 ;                                    (builtin-metrics/bolt-execute-tuple! (:builtin-metrics task-data)
 ;                                                                         executor-stats
 ;                                                                         (.getSourceComponent tuple)
 ;                                                                         (.getSourceStreamId tuple)
 ;                                                                         delta)
-;                                    (stats/bolt-execute-tuple! executor-stats
-;                                                               (.getSourceComponent tuple)
-;                                                               (.getSourceStreamId tuple)
-;                                                               delta)))))))]
+                                    (stats/bolt-execute-tuple! executor-stats
+                                                               (.getSourceComponent tuple)
+                                                               (.getSourceStreamId tuple)
+                                                               delta)))))))]
 
     ;; TODO: can get any SubscribedState objects out of the context now
 
