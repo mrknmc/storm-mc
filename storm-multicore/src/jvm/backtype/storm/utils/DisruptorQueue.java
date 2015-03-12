@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
@@ -66,6 +67,8 @@ public class DisruptorQueue implements IStatefulObject {
                 publishDirect(FLUSH_CACHE, true);
             } catch (InsufficientCapacityException e) {
                 throw new RuntimeException("This code should be unreachable!", e);
+            } catch (InterruptedException e) {
+                throw new RuntimeException("This code should be unreachable!", e);
             }
         }
     }
@@ -78,7 +81,7 @@ public class DisruptorQueue implements IStatefulObject {
         consumeBatchToCursor(_barrier.getCursor(), handler);
     }
     
-    public void haltWithInterrupt() {
+    public void haltWithInterrupt() throws  InterruptedException {
         publish(INTERRUPT);
     }
     
@@ -126,7 +129,7 @@ public class DisruptorQueue implements IStatefulObject {
     /*
      * Caches until consumerStarted is called, upon which the cache is flushed to the consumer
      */
-    public void publish(Object obj) {
+    public void publish(Object obj) throws InterruptedException {
         try {
             publish(obj, true);
         } catch (InsufficientCapacityException ex) {
@@ -134,11 +137,11 @@ public class DisruptorQueue implements IStatefulObject {
         }
     }
     
-    public void tryPublish(Object obj) throws InsufficientCapacityException {
+    public void tryPublish(Object obj) throws InterruptedException, InsufficientCapacityException {
         publish(obj, false);
     }
     
-    public void publish(Object obj, boolean block) throws InsufficientCapacityException {
+    public void publish(Object obj, boolean block) throws InterruptedException, InsufficientCapacityException {
 
         boolean publishNow = consumerStartedFlag;
 
@@ -159,10 +162,25 @@ public class DisruptorQueue implements IStatefulObject {
         }
     }
     
-    private void publishDirect(Object obj, boolean block) throws InsufficientCapacityException {
-        final long id;
+    private void publishDirect(Object obj, boolean block) throws InterruptedException, InsufficientCapacityException {
+        long id;
         if(block) {
-            id = _buffer.next();
+            while (true) {
+                try {
+                    // try to get it, if successful, break out
+                    id = _buffer.tryNext(1);
+                    break;
+                } catch (InsufficientCapacityException e) {
+                    // Interrupt if thread interrupted
+                    if (Thread.currentThread().isInterrupted()) {
+                        throw new InterruptedException();
+                    } else {
+                        // Otherwise loop again but wait a bit
+                        // This is copied over from Disruptor
+                        LockSupport.parkNanos(1L);
+                    }
+                }
+            }
         } else {
             id = _buffer.tryNext(1);
         }
