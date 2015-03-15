@@ -20,7 +20,7 @@
 
     <groupId>com.mrknmc.storm-mc</groupId>
     <artifactId>storm-mc</artifactId>
-    <version>0.1.4</version>
+    <version>0.1.5</version>
     <packaging>pom</packaging>
     <name>Storm</name>
     <description>Distributed and fault-tolerant realtime computation</description>
@@ -41,6 +41,12 @@
         <module>storm-multicore</module>
         <module>examples/storm-starter</module>
     </modules>
+    <scm>
+	<url>https://github.com/mrknmc/storm-mc</url>
+	<connection>scm:git:https://github.com/mrknmc/storm-mc</connection>
+	<developerConnection>scm:git:https://github.com/mrknmc/storm-mc</developerConnection>
+	<tag>HEAD</tag>
+    </scm>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

@@ -81,7 +81,7 @@ public class DisruptorQueue implements IStatefulObject {
         consumeBatchToCursor(_barrier.getCursor(), handler);
     }
     
-    public void haltWithInterrupt() throws  InterruptedException {
+    public void haltWithInterrupt() throws InterruptedException {
         publish(INTERRUPT);
     }
     
