@@ -105,6 +105,10 @@ public class GeneralTopologyContext implements JSONAware {
      * Gets the declared output fields for the specified component/stream.
      */
     public Fields getComponentOutputFields(String componentId, String streamId) {
+        // hack to make ticks work
+        if (componentId.equals(Constants.SYSTEM_COMPONENT_ID) && streamId.equals(Constants.SYSTEM_TICK_STREAM_ID)) {
+            return new Fields("rate_secs");
+        }
         Fields ret = _componentToStreamToFields.get(componentId).get(streamId);
         if(ret==null) {
             throw new IllegalArgumentException("No output fields defined for component:stream " + componentId + ":" + streamId);

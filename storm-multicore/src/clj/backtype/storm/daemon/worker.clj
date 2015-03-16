@@ -15,7 +15,7 @@
 ;; limitations under the License.
 (ns backtype.storm.daemon.worker
   (:use [backtype.storm.daemon common])
-  (:use [backtype.storm util config log])
+  (:use [backtype.storm util config log timer])
   (:require [backtype.storm.cluster :as cluster])
   (:require [backtype.storm.disruptor :as disruptor])
   (:require [backtype.storm.daemon [executor :as executor]])
@@ -97,6 +97,14 @@
   (fn [] (halt-process! 1 "Worker died")))
 
 
+(defn mk-halting-timer [timer-name]
+  (mk-timer :kill-fn (fn [t]
+                       (log-error t "Error when processing event")
+                       (halt-process! 20 "Error when processing an event")
+                       )
+    :timer-name timer-name))
+
+
 (defn worker-data [conf storm-conf storm-id topology executors]
   (let [
          ;; state of cluster
@@ -129,6 +137,7 @@
       :component->stream->fields (component->stream->fields (:system-topology <>))
       :component->sorted-tasks (->> (:task->component <>) reverse-map (map-val sort))
       :executor-receive-queue-map executor-receive-queue-map
+      :user-timer (mk-halting-timer "user-timer")
       :short-executor-receive-queue-map (map-key first executor-receive-queue-map)
       :task->short-executor (->> executors
                               (mapcat (fn [e] (for [t (executor-id->tasks e)] [t (first e)])))

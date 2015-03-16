@@ -15,7 +15,7 @@
 ;;; limitations under the License.
 (ns backtype.storm.daemon.executor
   (:use [backtype.storm.daemon common])
-  (:use [backtype.storm config util log])
+  (:use [backtype.storm config util log timer])
   (:import [java.util Random List ArrayList LinkedList HashMap])
   (:import [backtype.storm Config Constants])
   (:import [backtype.storm.utils Utils RotatingMap RotatingMap$ExpiredCallback Time MutableLong])
@@ -71,6 +71,27 @@
 ;      (when (<= @interval-errors max-per-interval)
 ;        (cluster/report-error (:storm-cluster-state executor) (:storm-id executor) (:component-id executor) error)
 ;        ))))
+
+
+(defn setup-ticks! [worker executor-data]
+  (let [storm-conf (:storm-conf executor-data)
+        tick-time-secs (storm-conf TOPOLOGY-TICK-TUPLE-FREQ-SECS)
+        receive-queue (:receive-queue executor-data)
+        context (:worker-context executor-data)]
+    (when tick-time-secs
+      (if (or (system-id? (:component-id executor-data))
+            (and (not (storm-conf TOPOLOGY-ENABLE-MESSAGE-TIMEOUTS))
+              (= :spout (:type executor-data))))
+        (log-message "Timeouts disabled for executor " (:component-id executor-data) ":" (:executor-id executor-data))
+        (schedule-recurring
+          (:user-timer worker)
+          tick-time-secs
+          tick-time-secs
+          (fn []
+            (disruptor/publish
+              receive-queue
+              [nil (TupleImpl. context [tick-time-secs] Constants/SYSTEM_TASK_ID Constants/SYSTEM_TICK_STREAM_ID)]
+              )))))))
 
 
 (defprotocol RunningExecutor
@@ -130,12 +151,13 @@
       :shuffle
         (mk-shuffle-grouper target-tasks)
       :local-or-shuffle
-        (let [same-tasks (set/intersection
-                           (set target-tasks)
-                           (set (.getThisWorkerTasks context)))]
-          (if-not (empty? same-tasks)
-            (mk-shuffle-grouper (vec same-tasks))
-            (mk-shuffle-grouper target-tasks)))
+        (mk-shuffle-grouper target-tasks)
+;        (let [same-tasks (set/intersection
+;                           (set target-tasks)
+;                           (set (.getThisWorkerTasks context)))]
+;          (if-not (empty? same-tasks)
+;            (mk-shuffle-grouper (vec same-tasks))
+;            (mk-shuffle-grouper target-tasks)))
       :none
         (fn [task-id tuple]
           (let [i (mod (.nextInt random) num-tasks)]
@@ -245,6 +267,7 @@
                         TOPOLOGY-DEBUG
                         TOPOLOGY-MAX-SPOUT-PENDING
                         TOPOLOGY-MAX-TASK-PARALLELISM
+                        TOPOLOGY-TICK-TUPLE-FREQ-SECS
                         TOPOLOGY-SLEEP-SPOUT-WAIT-STRATEGY-TIME-MS
                         TOPOLOGY-SPOUT-WAIT-STRATEGY
                         )
@@ -642,7 +665,7 @@
 
         handlers (with-error-reaction report-error-and-die
                    (mk-threads executor-data task-datas))]
-;    (setup-ticks! worker executor-data)
+    (setup-ticks! worker executor-data)
 
     (log-message "Finished loading executor " component-id ":" (pr-str executor-id))
     ;; TODO: add method here to get rendered stats... have worker call that when heartbeating
