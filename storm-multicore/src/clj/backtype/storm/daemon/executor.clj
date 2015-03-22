@@ -22,7 +22,7 @@
   (:import [com.lmax.disruptor InsufficientCapacityException])
   (:import [backtype.storm.hooks ITaskHook])
   (:import [backtype.storm.daemon Shutdownable])
-  (:import [backtype.storm.tuple Tuple TupleImpl Fields MessageId])
+  (:import [backtype.storm.tuple Tuple TupleImpl Fields MessageId TupleImplFactory TupleImplPool])
   (:import [backtype.storm.generated GlobalStreamId])
   (:import [backtype.storm.grouping CustomStreamGrouping])
   (:import [backtype.storm.task WorkerTopologyContext OutputCollector IOutputCollector IBolt])
@@ -304,7 +304,7 @@
 
 
 (defmethod mk-threads :spout [executor-data task-datas]
-  (let [{:keys [storm-conf component-id worker-context transfer-fn report-error open-or-prepare-was-called?]} executor-data
+  (let [{:keys [storm-conf tuple-pool component-id worker-context transfer-fn report-error open-or-prepare-was-called?]} executor-data
         ^ISpoutWaitStrategy spout-wait-strategy (init-spout-wait-strategy storm-conf)
         max-spout-pending (executor-max-spout-pending storm-conf (count task-datas))
         ^Integer max-spout-pending (if max-spout-pending (int max-spout-pending))
@@ -372,10 +372,10 @@
                                          (fast-list-iter [out-task out-tasks]
                                                          (let [tuple-id (MessageId/makeUnanchored)
                                                                out-tuple (TupleImpl. worker-context
-                                                                                     values
-                                                                                     task-id
-                                                                                     out-stream-id
-                                                                                     tuple-id)]
+                                                                           values
+                                                                           task-id
+                                                                           out-stream-id
+                                                                           tuple-id)]
                                                            (transfer-fn out-task
                                                                         out-tuple
                                                                         overflow-buffer)
@@ -454,7 +454,7 @@
 (defmethod mk-threads :bolt [executor-data task-datas]
   (let [execute-sampler (mk-stats-sampler (:storm-conf executor-data))
         executor-stats (:stats executor-data)
-        {:keys [storm-conf component-id worker-context transfer-fn report-error open-or-prepare-was-called?]} executor-data
+        {:keys [storm-conf tuple-pool component-id worker-context transfer-fn report-error open-or-prepare-was-called?]} executor-data
         rand (Random. (Utils/secureRandomLong))
         tuple-action-fn (fn [task-id ^TupleImpl tuple]
                           ;; synchronization needs to be done with a key provided by this bolt, otherwise:
@@ -498,7 +498,8 @@
                                     (stats/bolt-execute-tuple! executor-stats
                                                                (.getSourceComponent tuple)
                                                                (.getSourceStreamId tuple)
-                                                               delta)))))))]
+                                                               delta)))
+                                (.returnObject tuple-pool tuple)))))]
 
     ;; TODO: can get any SubscribedState objects out of the context now
 
@@ -518,7 +519,9 @@
                                                     (tasks-fn task stream values)
                                                     (tasks-fn stream values))]
                                     (fast-list-iter [t out-tasks]
-                                                    (let [anchors-to-ids (HashMap.)]
+                                                    (let [anchors-to-ids (HashMap.)
+                                                          out-tuple (.borrowObject tuple-pool)
+                                                          tuple-id (MessageId/makeId anchors-to-ids)]
 ;                                                      (fast-list-iter [^TupleImpl a anchors]
 ;                                                                      (let [root-ids (-> a .getMessageId .getAnchorsToIds .keySet)]
 ;                                                                        (when (pos? (count root-ids))
@@ -527,12 +530,12 @@
 ;                                                                            (fast-list-iter [root-id root-ids]
 ;                                                                                            (put-xor! anchors-to-ids root-id edge-id))
 ;                                                                            ))))
-                                                      (transfer-fn t
-                                                                   (TupleImpl. worker-context
-                                                                               values
-                                                                               task-id
-                                                                               stream
-                                                                               (MessageId/makeId anchors-to-ids)))))
+                                                      (.fill out-tuple worker-context
+                                                        values
+                                                        task-id
+                                                        stream
+                                                        tuple-id)
+                                                      (transfer-fn t out-tuple)))
                                     (or out-tasks [])))]]
 ;          (builtin-metrics/register-all (:builtin-metrics task-data) storm-conf user-context)
 ;          (if (= component-id Constants/SYSTEM_COMPONENT_ID)
@@ -636,6 +639,7 @@
      :type executor-type
      ;; TODO: should refactor this to be part of the executor specific map (spout or bolt with :common field)
      :stats (mk-executor-stats <> (sampling-rate storm-conf))
+     :tuple-pool (TupleImplPool. (TupleImplFactory.))
      :interval->task->metric-registry (HashMap.)
      :task->component (:task->component worker)
      :stream->component->grouper (outbound-components worker-context component-id)
