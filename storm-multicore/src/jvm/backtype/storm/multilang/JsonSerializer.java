@@ -92,8 +92,8 @@ public class JsonSerializer implements ISerializer {
         String command = (String) msg.get("command");
         shellMsg.setCommand(command);
 
-        Object id = msg.get("id");
-        shellMsg.setId(id);
+//        Object id = msg.get("id");
+//        shellMsg.setId(id);
 
         String log = (String) msg.get("msg");
         shellMsg.setMsg(log);

@@ -45,8 +45,8 @@ public class SpoutOutputCollector implements ISpoutOutputCollector {
      *
      * @return the list of task ids that this tuple was sent to
      */
-    public List<Integer> emit(String streamId, List<Object> tuple, Object messageId) {
-        return _delegate.emit(streamId, tuple, messageId);
+    public List<Integer> emit(String streamId, List<Object> tuple) {
+        return _delegate.emit(streamId, tuple);
     }
 
     /**
@@ -59,26 +59,8 @@ public class SpoutOutputCollector implements ISpoutOutputCollector {
      *
      * @return the list of task ids that this tuple was sent to
      */
-    public List<Integer> emit(List<Object> tuple, Object messageId) {
-        return emit(Utils.DEFAULT_STREAM_ID, tuple, messageId);
-    }
-
-    /**
-     * Emits a tuple to the default output stream with a null message id. Storm will
-     * not track this message so ack and fail will never be called for this tuple. The
-     * emitted values must be immutable.
-     */
     public List<Integer> emit(List<Object> tuple) {
-        return emit(tuple, null);
-    }
-
-    /**
-     * Emits a tuple to the specified output stream with a null message id. Storm will
-     * not track this message so ack and fail will never be called for this tuple. The
-     * emitted values must be immutable.
-     */
-    public List<Integer> emit(String streamId, List<Object> tuple) {
-        return emit(streamId, tuple, null);
+        return emit(Utils.DEFAULT_STREAM_ID, tuple);
     }
 
     /**
@@ -86,32 +68,9 @@ public class SpoutOutputCollector implements ISpoutOutputCollector {
      * stream must have been declared as a direct stream, and the specified task must
      * use a direct grouping on this stream to receive the message. The emitted values must be 
      * immutable.
-     */
-    public void emitDirect(int taskId, String streamId, List<Object> tuple, Object messageId) {
-        _delegate.emitDirect(taskId, streamId, tuple, messageId);
-    }
-
-    /**
-     * Emits a tuple to the specified task on the default output stream. This output
-     * stream must have been declared as a direct stream, and the specified task must
-     * use a direct grouping on this stream to receive the message. The emitted values must be 
-     * immutable.
-     */
-    public void emitDirect(int taskId, List<Object> tuple, Object messageId) {
-        emitDirect(taskId, Utils.DEFAULT_STREAM_ID, tuple, messageId);
-    }
-    
-    /**
-     * Emits a tuple to the specified task on the specified output stream. This output
-     * stream must have been declared as a direct stream, and the specified task must
-     * use a direct grouping on this stream to receive the message. The emitted values must be 
-     * immutable.
-     *
-     * <p> Because no message id is specified, Storm will not track this message
-     * so ack and fail will never be called for this tuple.</p>
      */
     public void emitDirect(int taskId, String streamId, List<Object> tuple) {
-        emitDirect(taskId, streamId, tuple, null);
+        _delegate.emitDirect(taskId, streamId, tuple);
     }
 
     /**
@@ -119,12 +78,9 @@ public class SpoutOutputCollector implements ISpoutOutputCollector {
      * stream must have been declared as a direct stream, and the specified task must
      * use a direct grouping on this stream to receive the message. The emitted values must be 
      * immutable.
-     *
-     * <p> Because no message id is specified, Storm will not track this message
-     * so ack and fail will never be called for this tuple.</p>
      */
     public void emitDirect(int taskId, List<Object> tuple) {
-        emitDirect(taskId, tuple, null);
+        emitDirect(taskId, Utils.DEFAULT_STREAM_ID, tuple);
     }
 
     @Override

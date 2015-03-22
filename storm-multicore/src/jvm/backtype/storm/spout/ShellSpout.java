@@ -72,23 +72,23 @@ public class ShellSpout implements ISpout {
         querySubprocess();
     }
 
-    public void ack(Object msgId) {
-        if (_spoutMsg == null) {
-            _spoutMsg = new SpoutMsg();
-        }
-        _spoutMsg.setCommand("ack");
-        _spoutMsg.setId(msgId);
-        querySubprocess();
-    }
+//    public void ack(Object msgId) {
+//        if (_spoutMsg == null) {
+//            _spoutMsg = new SpoutMsg();
+//        }
+//        _spoutMsg.setCommand("ack");
+//        _spoutMsg.setId(msgId);
+//        querySubprocess();
+//    }
 
-    public void fail(Object msgId) {
-        if (_spoutMsg == null) {
-            _spoutMsg = new SpoutMsg();
-        }
-        _spoutMsg.setCommand("fail");
-        _spoutMsg.setId(msgId);
-        querySubprocess();
-    }
+//    public void fail(Object msgId) {
+//        if (_spoutMsg == null) {
+//            _spoutMsg = new SpoutMsg();
+//        }
+//        _spoutMsg.setCommand("fail");
+//        _spoutMsg.setId(msgId);
+//        querySubprocess();
+//    }
 
     private void querySubprocess() {
         try {
@@ -106,14 +106,14 @@ public class ShellSpout implements ISpout {
                     String stream = shellMsg.getStream();
                     Long task = shellMsg.getTask();
                     List<Object> tuple = shellMsg.getTuple();
-                    Object messageId = shellMsg.getId();
+//                    Object messageId = shellMsg.getId();
                     if (task == 0) {
-                        List<Integer> outtasks = _collector.emit(stream, tuple, messageId);
+                        List<Integer> outtasks = _collector.emit(stream, tuple);
                         if (shellMsg.areTaskIdsNeeded()) {
                             _process.writeTaskIds(outtasks);
                         }
                     } else {
-                        _collector.emitDirect((int) task.longValue(), stream, tuple, messageId);
+                        _collector.emitDirect((int) task.longValue(), stream, tuple);
                     }
                 } else {
                     throw new RuntimeException("Unknown command received: " + command);

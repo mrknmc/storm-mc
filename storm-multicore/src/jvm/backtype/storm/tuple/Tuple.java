@@ -168,5 +168,5 @@ public interface Tuple {
     /**
      * Gets the message id that associated with this tuple.
      */
-    public MessageId getMessageId();
+//    public MessageId getMessageId();
 }

@@ -35,21 +35,21 @@ public class BaseTaskHook implements ITaskHook {
     public void emit(EmitInfo info) {
     }
 
-    @Override
-    public void spoutAck(SpoutAckInfo info) {
-    }
+//    @Override
+//    public void spoutAck(SpoutAckInfo info) {
+//    }
 
-    @Override
-    public void spoutFail(SpoutFailInfo info) {
-    }
+//    @Override
+//    public void spoutFail(SpoutFailInfo info) {
+//    }
 
-    @Override
-    public void boltAck(BoltAckInfo info) {
-    }
+//    @Override
+//    public void boltAck(BoltAckInfo info) {
+//    }
 
-    @Override
-    public void boltFail(BoltFailInfo info) {
-    }
+//    @Override
+//    public void boltFail(BoltFailInfo info) {
+//    }
 
     @Override
     public void boltExecute(BoltExecuteInfo info) {
