@@ -21,7 +21,7 @@
     <parent>
         <artifactId>storm-mc</artifactId>
         <groupId>com.mrknmc.storm-mc</groupId>
-        <version>0.1.6</version>
+        <version>0.1.7</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
     <artifactId>storm-mc-bin</artifactId>
@@ -41,7 +41,7 @@
         <release.artifact>${project.build.directory}/storm-mc-${project.version}.tar.gz</release.artifact>
         <release.name>v${project.version}</release.name>
         <!--<release.repositoryId>storm-mc</release.repositoryId>-->
-        <project.version>v${project.version}</project.version>
+        <project.version>${project.version}</project.version>
     </properties>
 
     <build>
