@@ -49,12 +49,10 @@ public class BasicBoltExecutor implements IRichBolt {
         _collector.setContext(input);
         try {
             _bolt.execute(input, _collector);
-            _collector.getOutputter().ack(input);
         } catch(FailedException e) {
             if(e instanceof ReportedFailedException) {
                 _collector.reportError(e);
             }
-            _collector.getOutputter().fail(input);
         }
     }
 

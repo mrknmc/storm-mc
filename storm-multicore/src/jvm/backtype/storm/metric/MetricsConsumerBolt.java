@@ -54,7 +54,6 @@ public class MetricsConsumerBolt implements IBolt {
     @Override
     public void execute(Tuple input) {
         _metricsConsumer.handleDataPoints((IMetricsConsumer.TaskInfo)input.getValue(0), (Collection)input.getValue(1));
-        _collector.ack(input);
     }
 
     @Override

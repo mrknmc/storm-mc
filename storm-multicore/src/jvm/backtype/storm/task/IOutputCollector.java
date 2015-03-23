@@ -28,6 +28,4 @@ public interface IOutputCollector extends IErrorReporter {
      */
     List<Integer> emit(String streamId, Collection<Tuple> anchors, List<Object> tuple);
     void emitDirect(int taskId, String streamId, Collection<Tuple> anchors, List<Object> tuple);
-    void ack(Tuple input);
-    void fail(Tuple input);
 }

@@ -29,11 +29,9 @@
   "Reads the daemon config, creates a nimbus thread."
   [:daemon-conf {} :inimbus nil]
   (let [daemon-conf (merge (read-storm-config) daemon-conf)
-        nimbus (nimbus/service-handler
-                 daemon-conf
-                 (if inimbus inimbus (nimbus/standalone-nimbus)))
+        nimbus (nimbus/service-handler daemon-conf)
         cluster-map {:nimbus nimbus
-                     :daemon-conf daemon-conf}]
+                      :daemon-conf daemon-conf}]
     (.addShutdownHook (Runtime/getRuntime) (Thread. (fn [] (.shutdown nimbus))))
     cluster-map))
 

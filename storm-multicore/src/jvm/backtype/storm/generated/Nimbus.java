@@ -37,11 +37,11 @@ public class Nimbus implements java.io.Serializable {
 
     public void submitTopology(String name, Map conf, StormTopology topology) throws AlreadyAliveException, InvalidTopologyException;
 
-    public void submitTopologyWithOpts(String name, Map conf, StormTopology topology, SubmitOptions options) throws AlreadyAliveException, InvalidTopologyException;
+//    public void submitTopologyWithOpts(String name, Map conf, StormTopology topology, SubmitOptions options) throws AlreadyAliveException, InvalidTopologyException;
 
     public void killTopology(String name) throws NotAliveException;
 
-    public void killTopologyWithOpts(String name, KillOptions options) throws NotAliveException;
+//    public void killTopologyWithOpts(String name, KillOptions options) throws NotAliveException;
 
 //    public void activate(String name) throws NotAliveException;
 
