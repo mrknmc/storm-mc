@@ -24,7 +24,8 @@
   (:import [backtype.storm.task TopologyContext WorkerTopologyContext ShellBolt])
   (:import [backtype.storm.generated SpoutSpec Bolt])
   (:import [backtype.storm.spout ShellSpout])
-  (:import [backtype.storm.hooks.info EmitInfo])
+  (:import [backtype.storm.hooks.info SpoutAckInfo SpoutFailInfo
+            EmitInfo BoltFailInfo BoltAckInfo])
   (:require [backtype.storm [tuple :as tuple]])
   (:require [backtype.storm [stats :as stats]]))
 ;  (:require [backtype.storm.daemon.builtin-metrics :as builtin-metrics]))

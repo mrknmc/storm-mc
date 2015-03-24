@@ -22,12 +22,13 @@
   (:import [com.lmax.disruptor InsufficientCapacityException])
   (:import [backtype.storm.hooks ITaskHook])
   (:import [backtype.storm.daemon Shutdownable])
-  (:import [backtype.storm.tuple Tuple TupleImpl Fields TupleImplFactory TupleImplPool])
+  (:import [backtype.storm.tuple Tuple TupleImpl Fields MessageId TupleImplFactory TupleImplPool])
   (:import [backtype.storm.generated GlobalStreamId])
   (:import [backtype.storm.grouping CustomStreamGrouping])
   (:import [backtype.storm.task WorkerTopologyContext OutputCollector IOutputCollector IBolt])
   (:import [backtype.storm.spout ISpoutWaitStrategy SpoutOutputCollector ISpoutOutputCollector ISpout])
-  (:import [backtype.storm.hooks.info EmitInfo BoltExecuteInfo])
+  (:import [backtype.storm.hooks.info SpoutAckInfo SpoutFailInfo
+            EmitInfo BoltFailInfo BoltAckInfo BoltExecuteInfo])
   (:import [backtype.storm.metric.api IMetric IMetricsConsumer$TaskInfo IMetricsConsumer$DataPoint StateMetric])
   (:require [clojure.set :as set])
   (:require [backtype.storm.stats :as stats])
@@ -363,16 +364,18 @@
         (doseq [[task-id task-data] task-datas
                 :let [^ISpout spout-obj (:object task-data)
                       tasks-fn (:tasks-fn task-data)
-                      send-spout-msg (fn [out-stream-id values out-task-id]
+                      send-spout-msg (fn [out-stream-id values message-id out-task-id]
                                        (.increment emitted-count)
                                        (let [out-tasks (if out-task-id
                                                          (tasks-fn out-task-id out-stream-id values)
                                                          (tasks-fn out-stream-id values))]
                                          (fast-list-iter [out-task out-tasks]
-                                                         (let [out-tuple (TupleImpl. worker-context
+                                                         (let [tuple-id (MessageId/makeUnanchored)
+                                                               out-tuple (TupleImpl. worker-context
                                                                            values
                                                                            task-id
-                                                                           out-stream-id)]
+                                                                           out-stream-id
+                                                                           tuple-id)]
                                                            (transfer-fn out-task
                                                                         out-tuple
                                                                         overflow-buffer)
@@ -389,12 +392,12 @@
                  (:user-context task-data)
                  (SpoutOutputCollector.
                   (reify ISpoutOutputCollector
-                    (^List emit [this ^String stream-id ^List tuple]
-                      (send-spout-msg stream-id tuple nil)
+                    (^List emit [this ^String stream-id ^List tuple ^Object message-id]
+                      (send-spout-msg stream-id tuple message-id nil)
                       )
                     (^void emitDirect [this ^int out-task-id ^String stream-id
-                                       ^List tuple]
-                      (send-spout-msg stream-id tuple out-task-id)
+                                       ^List tuple ^Object message-id]
+                      (send-spout-msg stream-id tuple message-id out-task-id)
                       )
                     (reportError [this error]
                       (report-error error))
@@ -516,7 +519,9 @@
                                                     (tasks-fn task stream values)
                                                     (tasks-fn stream values))]
                                     (fast-list-iter [t out-tasks]
-                                                    (let [out-tuple (.borrowObject tuple-pool)]
+                                                    (let [anchors-to-ids (HashMap.)
+                                                          out-tuple (.borrowObject tuple-pool)
+                                                          tuple-id (MessageId/makeId anchors-to-ids)]
 ;                                                      (fast-list-iter [^TupleImpl a anchors]
 ;                                                                      (let [root-ids (-> a .getMessageId .getAnchorsToIds .keySet)]
 ;                                                                        (when (pos? (count root-ids))
@@ -528,7 +533,8 @@
                                                       (.fill out-tuple worker-context
                                                         values
                                                         task-id
-                                                        stream)
+                                                        stream
+                                                        tuple-id)
                                                       (transfer-fn t out-tuple)))
                                     (or out-tasks [])))]]
 ;          (builtin-metrics/register-all (:builtin-metrics task-data) storm-conf user-context)
@@ -551,8 +557,8 @@
                          (bolt-emit stream anchors values nil))
                        (emitDirect [this task stream anchors values]
                          (bolt-emit stream anchors values task))
-;                       (^void ack [this ^Tuple tuple]
-;                         )
+                       (^void ack [this ^Tuple tuple]
+                         )
 ;                         (let [^TupleImpl tuple tuple
 ;                               ack-val (.getAckVal tuple)]
 ;                           (fast-map-iter [[root id] (.. tuple getMessageId getAnchorsToIds)]
@@ -572,8 +578,8 @@
 ;                                                      (.getSourceComponent tuple)
 ;                                                      (.getSourceStreamId tuple)
 ;                                                      delta))))
-;                       (^void fail [this ^Tuple tuple]
-;                         )
+                       (^void fail [this ^Tuple tuple]
+                         )
 ;                         (fast-list-iter [root (.. tuple getMessageId getAnchors)]
 ;                                         (task/send-unanchored task-data
 ;                                                               ACKER-FAIL-STREAM-ID

@@ -29,18 +29,18 @@ public class TupleImpl extends IndifferentAccessMap implements Seqable, Indexed,
     private int taskId;
     private String streamId;
     private GeneralTopologyContext context;
-//    private MessageId id;
+    private MessageId id;
     private IPersistentMap _meta = null;
 
     public TupleImpl() {
 
     }
     
-    public TupleImpl(GeneralTopologyContext context, List<Object> values, int taskId, String streamId) {
+    public TupleImpl(GeneralTopologyContext context, List<Object> values, int taskId, String streamId, MessageId id) {
         this.values = values;
         this.taskId = taskId;
         this.streamId = streamId;
-//        this.id = id;
+        this.id = id;
         this.context = context;
         
         String componentId = context.getComponentId(taskId);
@@ -53,15 +53,15 @@ public class TupleImpl extends IndifferentAccessMap implements Seqable, Indexed,
         }
     }
 
-//    public TupleImpl(GeneralTopologyContext context, List<Object> values, int taskId, String streamId) {
-//        this(context, values, taskId, streamId);
-//    }
+    public TupleImpl(GeneralTopologyContext context, List<Object> values, int taskId, String streamId) {
+        this(context, values, taskId, streamId, MessageId.makeUnanchored());
+    }
 
-    public void fill(GeneralTopologyContext context, List<Object> values, int taskId, String streamId) {
+    public void fill(GeneralTopologyContext context, List<Object> values, int taskId, String streamId, MessageId id) {
         this.values = values;
         this.taskId = taskId;
         this.streamId = streamId;
-//        this.id = id;
+        this.id = id;
         this.context = context;
 
         String componentId = context.getComponentId(taskId);
@@ -167,9 +167,9 @@ public class TupleImpl extends IndifferentAccessMap implements Seqable, Indexed,
       this.streamId = streamId;
     }
 
-//    public void setId(MessageId id) {
-//      this.id = id;
-//    }
+    public void setId(MessageId id) {
+      this.id = id;
+    }
 
   public Object getValueByField(String field) {
         return values.get(fieldIndex(field));
@@ -239,13 +239,13 @@ public class TupleImpl extends IndifferentAccessMap implements Seqable, Indexed,
         return streamId;
     }
     
-//    public MessageId getMessageId() {
-//        return id;
-//    }
+    public MessageId getMessageId() {
+        return id;
+    }
     
     @Override
     public String toString() {
-        return "source: " + getSourceComponent() + ":" + taskId + ", stream: " + streamId + ", " + values.toString();
+        return "source: " + getSourceComponent() + ":" + taskId + ", stream: " + streamId + ", id: "+ id.toString() + ", " + values.toString();
     }
     
     @Override

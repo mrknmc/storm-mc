@@ -15,43 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package backtype.storm.hooks;
+package backtype.storm.hooks.info;
 
-import backtype.storm.hooks.info.*;
-import backtype.storm.task.TopologyContext;
-
-import java.util.Map;
-
-public class BaseTaskHook implements ITaskHook {
-    @Override
-    public void prepare(Map conf, TopologyContext context) {
-    }
-
-    @Override
-    public void cleanup() {
-    }    
-
-    @Override
-    public void emit(EmitInfo info) {
-    }
-
-    @Override
-    public void spoutAck(SpoutAckInfo info) {
-    }
-
-    @Override
-    public void spoutFail(SpoutFailInfo info) {
-    }
-
-    @Override
-    public void boltAck(BoltAckInfo info) {
-    }
-
-    @Override
-    public void boltFail(BoltFailInfo info) {
-    }
-
-    @Override
-    public void boltExecute(BoltExecuteInfo info) {
+public class SpoutFailInfo {
+    public Object messageId;
+    public int spoutTaskId;
+    public Long failLatencyMs; // null if it wasn't sampled
+    
+    public SpoutFailInfo(Object messageId, int spoutTaskId, Long failLatencyMs) {
+        this.messageId = messageId;
+        this.spoutTaskId = spoutTaskId;
+        this.failLatencyMs = failLatencyMs;
     }
 }

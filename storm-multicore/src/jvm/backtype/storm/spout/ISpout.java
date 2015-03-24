@@ -95,12 +95,12 @@ public interface ISpout extends Serializable {
      * has been fully processed. Typically, an implementation of this method will take that
      * message off the queue and prevent it from being replayed.
      */
-//    void ack(Object msgId);
+    void ack(Object msgId);
 
     /**
      * The tuple emitted by this spout with the msgId identifier has failed to be
      * fully processed. Typically, an implementation of this method will put that
      * message back on the queue to be replayed at a later time.
      */
-//    void fail(Object msgId);
+    void fail(Object msgId);
 }

@@ -34,7 +34,7 @@ import java.util.List;
  */
 public class ShellMsg {
     private String command;
-//    private Object id;
+    private Object id;
     private List<String> anchors;
     private String stream;
     private long task;
@@ -50,13 +50,13 @@ public class ShellMsg {
         this.command = command;
     }
 
-//    public Object getId() {
-//        return id;
-//    }
+    public Object getId() {
+        return id;
+    }
 
-//    public void setId(Object id) {
-//        this.id = id;
-//    }
+    public void setId(Object id) {
+        this.id = id;
+    }
 
     public List<String> getAnchors() {
         return anchors;

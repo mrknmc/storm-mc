@@ -111,7 +111,11 @@ public class ShellBolt implements IBolt {
                         ShellMsg shellMsg = _process.readShellMsg();
 
                         String command = shellMsg.getCommand();
-                        if (command.equals("error")) {
+                        if(command.equals("ack")) {
+                            handleAck(shellMsg.getId());
+                        } else if (command.equals("fail")) {
+                            handleFail(shellMsg.getId());
+                        } else if (command.equals("error")) {
                             handleError(shellMsg.getMsg());
                         } else if (command.equals("log")) {
                             String msg = shellMsg.getMsg();
