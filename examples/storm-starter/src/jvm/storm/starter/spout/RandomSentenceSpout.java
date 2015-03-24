@@ -49,6 +49,14 @@ public class RandomSentenceSpout extends BaseRichSpout {
   }
 
   @Override
+  public void ack(Object id) {
+  }
+
+  @Override
+  public void fail(Object id) {
+  }
+
+  @Override
   public void declareOutputFields(OutputFieldsDeclarer declarer) {
     declarer.declare(new Fields("word"));
   }
