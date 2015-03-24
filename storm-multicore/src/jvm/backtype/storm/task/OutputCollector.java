@@ -210,6 +210,16 @@ public class OutputCollector implements IOutputCollector {
     }
 
     @Override
+    public void ack(Tuple input) {
+        _delegate.ack(input);
+    }
+
+    @Override
+    public void fail(Tuple input) {
+        _delegate.fail(input);
+    }
+
+    @Override
     public void reportError(Throwable error) {
         _delegate.reportError(error);
     }

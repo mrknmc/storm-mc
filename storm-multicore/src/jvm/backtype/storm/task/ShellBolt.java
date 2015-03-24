@@ -180,6 +180,22 @@ public class ShellBolt implements IBolt {
         _inputs.clear();
     }
 
+    private void handleAck(Object id) {
+        Tuple acked = _inputs.remove(id);
+        if(acked==null) {
+            throw new RuntimeException("Acked a non-existent or already acked/failed id: " + id);
+        }
+        _collector.ack(acked);
+    }
+
+    private void handleFail(Object id) {
+        Tuple failed = _inputs.remove(id);
+        if(failed==null) {
+            throw new RuntimeException("Failed a non-existent or already acked/failed id: " + id);
+        }
+        _collector.fail(failed);
+    }
+
     private void handleError(String msg) {
         _collector.reportError(new Exception("Shell Process Exception: " + msg));
     }

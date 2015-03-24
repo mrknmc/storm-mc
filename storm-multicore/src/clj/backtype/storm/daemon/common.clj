@@ -26,6 +26,9 @@
 (def SYSTEM-STREAM-ID "__system")
 
 
+(defrecord Assignment [executor->worker-uuid executor->start-time-secs])
+
+
 (defprotocol DaemonCommon
   (waiting? [this]))
 
@@ -82,6 +85,10 @@
   "Retrieves all components of a topology in a id->component map."
   [^StormTopology topology]
   (apply merge {} (.getBolts topology) (.getSpouts topology)))
+
+
+;; component->executors is a map from spout/bolt id to number of executors for that component
+(defrecord StormBase [storm-name launch-time-secs status num-workers component->executors])
 
 
 (def grouping-constants

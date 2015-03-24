@@ -62,6 +62,14 @@ public class TestPlannerSpout extends BaseRichSpout {
     public void nextTuple() {
         Utils.sleep(100);
     }
+    
+    public void ack(Object msgId){
+        
+    }
+
+    public void fail(Object msgId){
+        
+    }
 
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         declarer.declare(getOutputFields());

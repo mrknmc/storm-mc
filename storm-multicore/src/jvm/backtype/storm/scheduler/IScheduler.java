@@ -15,19 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package backtype.storm.task;
+package backtype.storm.scheduler;
 
-import backtype.storm.tuple.Tuple;
+import java.util.Map;
 
-import java.util.Collection;
-import java.util.List;
 
-public interface IOutputCollector extends IErrorReporter {
+public interface IScheduler {
+    
+    void prepare(Map conf);
+
     /**
-     *  Returns the task ids that received the tuples.
+     * Set assignments for the topologies which needs scheduling. The new assignments is available
+     * through <code>cluster.getAssignment()</code>
+     * @param topology Details of a <code>StormTopology</code>
+     * @param cluster
      */
-    List<Integer> emit(String streamId, Collection<Tuple> anchors, List<Object> tuple);
-    void emitDirect(int taskId, String streamId, Collection<Tuple> anchors, List<Object> tuple);
-    void ack(Tuple input);
-    void fail(Tuple input);
+    void schedule(TopologyDetails topology, Cluster cluster);
 }
