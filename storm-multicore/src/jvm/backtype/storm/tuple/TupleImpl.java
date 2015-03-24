@@ -31,10 +31,6 @@ public class TupleImpl extends IndifferentAccessMap implements Seqable, Indexed,
     private GeneralTopologyContext context;
     private MessageId id;
     private IPersistentMap _meta = null;
-
-    public TupleImpl() {
-
-    }
     
     public TupleImpl(GeneralTopologyContext context, List<Object> values, int taskId, String streamId, MessageId id) {
         this.values = values;
@@ -55,24 +51,7 @@ public class TupleImpl extends IndifferentAccessMap implements Seqable, Indexed,
 
     public TupleImpl(GeneralTopologyContext context, List<Object> values, int taskId, String streamId) {
         this(context, values, taskId, streamId, MessageId.makeUnanchored());
-    }
-
-    public void fill(GeneralTopologyContext context, List<Object> values, int taskId, String streamId, MessageId id) {
-        this.values = values;
-        this.taskId = taskId;
-        this.streamId = streamId;
-        this.id = id;
-        this.context = context;
-
-        String componentId = context.getComponentId(taskId);
-        Fields schema = context.getComponentOutputFields(componentId, streamId);
-        if(values.size()!=schema.size()) {
-          throw new IllegalArgumentException(
-            "Tuple created with wrong number of fields. " +
-              "Expected " + schema.size() + " fields but got " +
-              values.size() + " fields");
-        }
-    }
+    }    
     
     Long _processSampleStartTime = null;
     Long _executeSampleStartTime = null;
@@ -154,24 +133,9 @@ public class TupleImpl extends IndifferentAccessMap implements Seqable, Indexed,
     public byte[] getBinary(int i) {
         return (byte[]) values.get(i);
     }
-
-    public void setValues(List<Object> values) {
-      this.values = values;
-    }
-
-    public void setTaskId(int taskId) {
-      this.taskId = taskId;
-    }
-
-    public void setStreamId(String streamId) {
-      this.streamId = streamId;
-    }
-
-    public void setId(MessageId id) {
-      this.id = id;
-    }
-
-  public Object getValueByField(String field) {
+    
+    
+    public Object getValueByField(String field) {
         return values.get(fieldIndex(field));
     }
 
