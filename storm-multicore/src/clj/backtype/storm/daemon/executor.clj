@@ -679,7 +679,7 @@
       (shutdown
         [this]
         (log-message "Shutting down executor " component-id ":" (pr-str executor-id))
-;        (disruptor/halt-with-interrupt! (:receive-queue executor-data))
+        (disruptor/halt-with-interrupt! (:receive-queue executor-data))
 ;        (disruptor/halt-with-interrupt! (:batch-transfer-queue executor-data))
         (doseq [h handlers]
           (.interrupt h)

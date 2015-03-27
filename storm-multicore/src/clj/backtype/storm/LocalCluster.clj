@@ -32,9 +32,11 @@
         nimbus (nimbus/service-handler
                  daemon-conf
                  (if inimbus inimbus (nimbus/standalone-nimbus)))
+        shutdown-hook (Thread. (fn [] (.shutdown nimbus)))
         cluster-map {:nimbus nimbus
-                     :daemon-conf daemon-conf}]
-    (.addShutdownHook (Runtime/getRuntime) (Thread. (fn [] (.shutdown nimbus))))
+                     :daemon-conf daemon-conf
+                     :shutdown-hook shutdown-hook}]
+    (.addShutdownHook (Runtime/getRuntime) shutdown-hook)
     cluster-map))
 
 
@@ -53,6 +55,7 @@
 
 (defn -shutdown
   [this]
+  (.removeShutdownHook (:shutdown-hook (. this state)))
   (.shutdown (:nimbus (. this state))))
 
 
