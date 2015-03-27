@@ -55,7 +55,7 @@
 
 (defn -shutdown
   [this]
-  (.removeShutdownHook (:shutdown-hook (. this state)))
+  (.removeShutdownHook (Runtime/getRuntime) (:shutdown-hook (. this state)))
   (.shutdown (:nimbus (. this state))))
 
 
